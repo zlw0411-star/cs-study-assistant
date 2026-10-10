@@ -1,0 +1,1657 @@
+{
+  "version": 1,
+  "topics": [
+    {
+      "id": "ds_linear_list",
+      "subject": "数据结构",
+      "title": "线性表与顺序、链式存储",
+      "summary": "顺序表用连续空间支持按下标随机访问，插入删除常需移动元素；链表通过指针连接节点，已知位置时修改链接较快，但按序号查找需遍历。选择结构时要区分访问模式和更新代价。",
+      "prerequisites": [],
+      "checklist": [
+        "能比较顺序表和单链表的访问、插入删除代价",
+        "能按给定操作画出链表链接变化"
+      ],
+      "common_mistakes": [
+        "把链表按下标访问当作常数时间",
+        "忽略插入位置已知与未知的区别"
+      ],
+      "keywords": [
+        "线性表",
+        "顺序表",
+        "链表",
+        "随机访问",
+        "插入删除",
+        "array list",
+        "linked list",
+        "顺序存储",
+        "链式存储",
+        "单链表",
+        "双链表"
+      ],
+      "order": 1,
+      "why_questions": [
+        "比较连续存储与指针链接为何会让访问和插入的代价不同？"
+      ],
+      "transfer_prompt": "把顺序表换成单链表，若只允许从头开始且插入位置未知，如何估算查找与插入总成本？",
+      "transfer_hint": "先分别拆开定位位置与修改结构两步。"
+    },
+    {
+      "id": "ds_stack_queue",
+      "subject": "数据结构",
+      "title": "栈、队列与应用",
+      "summary": "栈遵循后进先出，队列遵循先进先出。循环队列用模运算回绕下标，需明确空、满判别约定；递归调用、括号匹配、层序处理常可映射到栈或队列。",
+      "prerequisites": [
+        "ds_linear_list"
+      ],
+      "checklist": [
+        "能跟踪栈和队列的一串入队出队操作",
+        "能说明循环队列如何区分空与满"
+      ],
+      "common_mistakes": [
+        "混淆栈顶与队尾的操作顺序",
+        "未先确认队列空满标志约定"
+      ],
+      "keywords": [
+        "栈",
+        "队列",
+        "循环队列",
+        "后进先出",
+        "先进先出",
+        "stack",
+        "queue",
+        "共享栈"
+      ],
+      "order": 2,
+      "why_questions": [
+        "为什么栈和队列的操作约束分别对应不同的处理顺序？"
+      ],
+      "transfer_prompt": "若任务改为按到达先后处理，同时允许撤销最近一次操作，应如何组合两种结构？",
+      "transfer_hint": "区分主流程顺序与回退信息各自需要的访问次序。"
+    },
+    {
+      "id": "ds_string_matching",
+      "subject": "数据结构",
+      "title": "串匹配与KMP思路",
+      "summary": "朴素匹配在失配时可能回退主串位置。KMP根据模式串自身前后缀信息决定模式串的新位置，避免重复比较已确认的主串部分；next数组定义有不同版本，计算时必须遵循题目给定约定。",
+      "prerequisites": [
+        "ds_linear_list"
+      ],
+      "checklist": [
+        "能按给定next定义逐位计算前缀信息",
+        "能解释KMP失配后主串指针为何无需回退"
+      ],
+      "common_mistakes": [
+        "混用不同教材的next数组下标约定",
+        "把最长相等真前后缀与任意公共子串混淆"
+      ],
+      "keywords": [
+        "串匹配",
+        "KMP",
+        "next数组",
+        "前缀函数",
+        "模式串",
+        "string matching",
+        "prefix function",
+        "模式匹配"
+      ],
+      "order": 3,
+      "why_questions": [
+        "KMP如何利用模式串信息避免重复检查主串字符？"
+      ],
+      "transfer_prompt": "若模式串末尾增加一个字符，哪些前缀信息可能需要重算，主串指针策略为什么仍成立？",
+      "transfer_hint": "从已匹配部分的最长真前后缀关系推导。"
+    },
+    {
+      "id": "ds_tree_traversal",
+      "subject": "数据结构",
+      "title": "树的遍历与基本性质",
+      "summary": "先序、中序、后序分别围绕根结点的访问时机定义；层序遍历按层从左到右访问。二叉树遍历序列和树形约束可用于还原结构，但仅给先序和后序通常不能唯一确定一般二叉树。",
+      "prerequisites": [
+        "ds_stack_queue"
+      ],
+      "checklist": [
+        "能手工写出给定二叉树的三种深度优先序列",
+        "能判断遍历序列是否足以唯一确定树"
+      ],
+      "common_mistakes": [
+        "记错中序遍历访问根的位置",
+        "误认为先序与后序总能唯一还原二叉树"
+      ],
+      "keywords": [
+        "二叉树",
+        "先序遍历",
+        "中序遍历",
+        "后序遍历",
+        "层序遍历",
+        "binary tree",
+        "traversal",
+        "二叉树遍历"
+      ],
+      "order": 4,
+      "why_questions": [
+        "遍历序列记录了树结构的哪些信息，为什么某些组合仍有歧义？"
+      ],
+      "transfer_prompt": "若给定中序和层序而不是中序和先序，尝试说明重建时如何按子树划分。",
+      "transfer_hint": "先定位根，再用中序切分左右子树。"
+    },
+    {
+      "id": "ds_bst_balance",
+      "subject": "数据结构",
+      "title": "二叉搜索树与平衡树",
+      "summary": "二叉搜索树满足左子树关键字小于根、右子树关键字大于根（重复值规则须另行约定），中序结果有序。树高决定查找路径长度；平衡操作限制树高增长，旋转前应先辨别失衡形态。",
+      "prerequisites": [
+        "ds_tree_traversal"
+      ],
+      "checklist": [
+        "能根据插入序列画出BST并写中序序列",
+        "能判断树高变化对搜索代价的影响"
+      ],
+      "common_mistakes": [
+        "把普通BST误认为始终平衡",
+        "未说明重复关键字的放置规则"
+      ],
+      "keywords": [
+        "二叉搜索树",
+        "BST",
+        "AVL",
+        "平衡因子",
+        "旋转",
+        "binary search tree",
+        "二叉排序树"
+      ],
+      "order": 5,
+      "why_questions": [
+        "为什么普通搜索树的查找代价会受树高影响？"
+      ],
+      "transfer_prompt": "改变关键字插入顺序后，普通BST和AVL的形状可能如何变化？",
+      "transfer_hint": "比较高度与旋转维护的代价。"
+    },
+    {
+      "id": "ds_heap_priority",
+      "subject": "数据结构",
+      "title": "堆与优先队列",
+      "summary": "大根堆要求每个父结点不小于其孩子，小根堆则相反；堆只保证父子局部次序，不保证整个数组有序。建堆、插入和删除根的操作应区分自底向上调整与沿路径筛选。",
+      "prerequisites": [
+        "ds_tree_traversal"
+      ],
+      "checklist": [
+        "能判断数组是否满足大根堆或小根堆",
+        "能跟踪删除堆顶后的筛选过程"
+      ],
+      "common_mistakes": [
+        "把堆序误当成完全排序",
+        "混淆堆排序升序和堆类型的关系"
+      ],
+      "keywords": [
+        "堆",
+        "优先队列",
+        "大根堆",
+        "小根堆",
+        "筛选",
+        "heap",
+        "priority queue"
+      ],
+      "order": 6,
+      "why_questions": [
+        "堆序为何足以快速访问极值，却不能直接提供全局有序次序？"
+      ],
+      "transfer_prompt": "若要反复输出最大元素，和只需一次完整排序相比，操作序列如何设计？",
+      "transfer_hint": "分别考虑建堆、取堆顶和调整的成本。"
+    },
+    {
+      "id": "ds_graph_traversal",
+      "subject": "数据结构",
+      "title": "图存储与遍历",
+      "summary": "邻接矩阵便于判断边并适合稠密图，空间通常与顶点数平方相关；邻接表适合稀疏图。DFS沿未访问邻接点深入，BFS按层扩展；遍历非连通图时需要从未访问顶点继续启动。",
+      "prerequisites": [
+        "ds_stack_queue"
+      ],
+      "checklist": [
+        "能在邻接表上手工执行DFS和BFS",
+        "能根据图稠密度选择存储方式"
+      ],
+      "common_mistakes": [
+        "漏掉非连通图中的其他连通分量",
+        "忽略邻接点访问顺序会影响遍历序列"
+      ],
+      "keywords": [
+        "图",
+        "邻接矩阵",
+        "邻接表",
+        "深度优先搜索",
+        "广度优先搜索",
+        "DFS",
+        "BFS",
+        "graph"
+      ],
+      "order": 7,
+      "why_questions": [
+        "邻接矩阵和邻接表的空间差异如何来自图的稀疏程度？"
+      ],
+      "transfer_prompt": "若图变为多个连通分量，遍历入口和访问序列如何改变？",
+      "transfer_hint": "检查一个分量完成后是否还有未访问顶点。"
+    },
+    {
+      "id": "ds_sort_search",
+      "subject": "数据结构",
+      "title": "排序与查找复杂度",
+      "summary": "排序算法比较时要同时看最好、平均、最坏时间、额外空间、稳定性和是否原地。二分查找要求有序区间并保持边界不变式；复杂度分析要明确输入规模和关键操作。",
+      "prerequisites": [
+        "ds_linear_list"
+      ],
+      "checklist": [
+        "能比较常见排序算法的复杂度和稳定性",
+        "能用边界不变式跟踪二分查找"
+      ],
+      "common_mistakes": [
+        "只背平均复杂度而忽略最坏情形",
+        "对无序数据直接使用二分查找"
+      ],
+      "keywords": [
+        "排序",
+        "稳定性",
+        "二分查找",
+        "时间复杂度",
+        "空间复杂度",
+        "sorting",
+        "binary search",
+        "折半查找",
+        "直接插入排序",
+        "快速排序",
+        "归并排序"
+      ],
+      "order": 8,
+      "why_questions": [
+        "稳定性和复杂度分别回答排序算法的什么问题？"
+      ],
+      "transfer_prompt": "若输入几乎有序且要求稳定，选择算法时还需要确认哪些实现条件？",
+      "transfer_hint": "结合输入分布、额外空间与具体实现分析。"
+    },
+    {
+      "id": "co_data_representation",
+      "subject": "计算机组成原理",
+      "title": "数据表示与补码",
+      "summary": "无符号数与有符号数使用相同位串时解释不同。n位补码范围为−2^(n−1)到2^(n−1)−1；定长运算结果按位宽截断，并需依据符号位与进位关系判断溢出。",
+      "prerequisites": [],
+      "checklist": [
+        "能在指定位宽下求整数的补码",
+        "能区分进位与有符号溢出"
+      ],
+      "common_mistakes": [
+        "把最高位进位直接当作有符号溢出",
+        "忘记补码最小值没有正数对称值"
+      ],
+      "keywords": [
+        "补码",
+        "原码",
+        "反码",
+        "无符号数",
+        "溢出",
+        "two's complement",
+        "overflow"
+      ],
+      "order": 9,
+      "why_questions": [
+        "同一位串为什么会因解释方式不同而代表不同整数？"
+      ],
+      "transfer_prompt": "把位宽从8位改为5位时，补码范围和截断结果如何重新判断？",
+      "transfer_hint": "先计算位宽对应范围，再按模数观察位串。"
+    },
+    {
+      "id": "co_integer_arithmetic",
+      "subject": "计算机组成原理",
+      "title": "定点运算与乘除",
+      "summary": "定点加减遵循位宽和数值编码约定；移位乘除要区分逻辑移位、算术移位及被移出位。乘除算法的中间寄存器和符号处理依赖具体题目给定的数据通路。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能按指定位宽执行补码加减并判断溢出",
+        "能说明算术右移与逻辑右移的差别"
+      ],
+      "common_mistakes": [
+        "把算术右移当成无符号除法的普遍替代",
+        "忽略中间结果的寄存器位宽"
+      ],
+      "keywords": [
+        "定点运算",
+        "补码加法",
+        "算术移位",
+        "逻辑移位",
+        "乘法",
+        "除法",
+        "fixed point"
+      ],
+      "order": 10,
+      "why_questions": [
+        "定长运算中为何要同时关注编码、位宽和溢出？"
+      ],
+      "transfer_prompt": "若操作从加法改成算术右移，哪些关于符号与被移出位的判断仍然重要？",
+      "transfer_hint": "明确操作数解释和结果寄存器宽度。"
+    },
+    {
+      "id": "co_instruction_format",
+      "subject": "计算机组成原理",
+      "title": "指令格式与寻址方式",
+      "summary": "指令由操作码及地址、寄存器或立即数等字段构成。寻址方式决定操作数如何形成；有效地址计算要按指令格式解释位字段，并区分形式地址与最终有效地址。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能拆分给定指令字段并说明各字段用途",
+        "能逐步计算不同寻址方式的有效地址"
+      ],
+      "common_mistakes": [
+        "把立即数误当作内存地址",
+        "混淆间接寻址和寄存器间接寻址"
+      ],
+      "keywords": [
+        "指令格式",
+        "操作码",
+        "寻址方式",
+        "有效地址",
+        "立即数",
+        "instruction format",
+        "addressing mode"
+      ],
+      "order": 11,
+      "why_questions": [
+        "寻址方式为何影响有效地址形成过程？"
+      ],
+      "transfer_prompt": "若基址寻址增加一个位移字段，取操作数前需要经过哪些地址计算步骤？",
+      "transfer_hint": "从字段解释、基址来源到最终地址逐步写出。"
+    },
+    {
+      "id": "co_cpu_datapath",
+      "subject": "计算机组成原理",
+      "title": "CPU数据通路与控制",
+      "summary": "数据通路由寄存器、ALU、总线及选择器等部件组成，控制信号决定数据移动和运算。分析一条指令时应按取指、译码、执行、访存、写回等步骤追踪状态变化。",
+      "prerequisites": [
+        "co_instruction_format"
+      ],
+      "checklist": [
+        "能按时钟步骤追踪一条指令的数据流",
+        "能从控制信号判断寄存器何时写入"
+      ],
+      "common_mistakes": [
+        "把控制器和实际运算数据通路混为一体",
+        "忽略写回目标及写入时机"
+      ],
+      "keywords": [
+        "数据通路",
+        "控制信号",
+        "ALU",
+        "寄存器",
+        "取指",
+        "写回",
+        "datapath",
+        "control unit"
+      ],
+      "order": 12,
+      "why_questions": [
+        "控制信号如何决定数据通路中一次状态更新？"
+      ],
+      "transfer_prompt": "若一条指令由寄存器写回改为存储器写入，哪些数据路径和控制动作会改变？",
+      "transfer_hint": "沿数据来源、ALU结果、目标部件跟踪。"
+    },
+    {
+      "id": "co_pipeline_hazard",
+      "subject": "计算机组成原理",
+      "title": "指令流水线与冒险",
+      "summary": "流水线重叠执行多条指令的不同阶段。结构、数据和控制冒险分别来自资源冲突、数据依赖和控制流改变；转发、暂停或分支预测等方法可缓解问题，具体周期数取决于题设规则。",
+      "prerequisites": [
+        "co_cpu_datapath"
+      ],
+      "checklist": [
+        "能区分三类流水线冒险的成因",
+        "能按题设转发规则画出时空图并计算暂停周期"
+      ],
+      "common_mistakes": [
+        "漏看load-use等数据相关类型",
+        "未确认分支在哪一级确定就计算冲刷周期"
+      ],
+      "keywords": [
+        "流水线",
+        "结构冒险",
+        "数据冒险",
+        "控制冒险",
+        "转发",
+        "停顿",
+        "pipeline hazard"
+      ],
+      "order": 13,
+      "why_questions": [
+        "三类冒险分别来自什么资源或依赖关系？"
+      ],
+      "transfer_prompt": "若把某功能部件改为多端口，哪类冲突可能消失，其他冒险为何仍存在？",
+      "transfer_hint": "检查依赖是否属于结构、数据或控制原因。"
+    },
+    {
+      "id": "co_cache",
+      "subject": "计算机组成原理",
+      "title": "Cache映射与替换",
+      "summary": "Cache把主存块映射到缓存行，可采用直接映射、组相联或全相联。地址划分为标记、组索引和块内偏移，位数取决于地址空间、行数、组数和块大小；命中率与访问开销共同影响平均访存时间。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能从主存与Cache参数计算地址字段位数",
+        "能跟踪给定地址序列的命中和替换"
+      ],
+      "common_mistakes": [
+        "把组数与每组行数混淆",
+        "未先确定字节编址还是字编址就计算偏移"
+      ],
+      "keywords": [
+        "Cache",
+        "缓存",
+        "直接映射",
+        "组相联",
+        "标记位",
+        "块内偏移",
+        "命中率",
+        "cache mapping"
+      ],
+      "order": 14,
+      "why_questions": [
+        "局部性和映射方式如何影响命中与冲突？"
+      ],
+      "transfer_prompt": "若块大小增加而总Cache容量不变，块内偏移、行数和冲突风险如何变化？",
+      "transfer_hint": "先重算地址字段；命中变化还取决于访问工作负载、相联度与冲突，不能只凭块变大断言命中率单调变化。"
+    },
+    {
+      "id": "co_memory_hierarchy",
+      "subject": "计算机组成原理",
+      "title": "存储层次与主存组织",
+      "summary": "存储层次利用速度、容量和成本差异。主存由若干存储芯片按位扩展或字扩展组织；容量、地址位数和芯片数量之间要先统一按位或按字计算。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能从芯片规格计算扩展后的容量与芯片数量",
+        "能区分按位扩展和按字扩展"
+      ],
+      "common_mistakes": [
+        "混淆字节、字和位的容量单位",
+        "忽略地址线与数据线的不同作用"
+      ],
+      "keywords": [
+        "存储层次",
+        "主存",
+        "存储芯片",
+        "位扩展",
+        "字扩展",
+        "地址线",
+        "memory hierarchy",
+        "位示图",
+        "主存扩展"
+      ],
+      "order": 15,
+      "why_questions": [
+        "为何存储层次要在速度、容量和成本之间折中？"
+      ],
+      "transfer_prompt": "若芯片字宽减半但容量目标不变，需要怎样调整位扩展与字扩展？",
+      "transfer_hint": "分别比较深度和每个字的位数。"
+    },
+    {
+      "id": "co_io_interrupt_dma",
+      "subject": "计算机组成原理",
+      "title": "中断、DMA与I/O接口",
+      "summary": "程序查询由CPU反复检查设备状态；中断由设备事件通知CPU处理；DMA让设备控制器直接传送数据块，CPU主要参与初始化和完成处理。接口通常包含状态、控制和数据寄存器。",
+      "prerequisites": [
+        "co_cpu_datapath"
+      ],
+      "checklist": [
+        "能比较程序查询、中断和DMA的CPU参与方式",
+        "能解释DMA传送期间CPU与设备的工作关系"
+      ],
+      "common_mistakes": [
+        "认为DMA完全不需要CPU参与",
+        "混淆中断响应和普通函数调用"
+      ],
+      "keywords": [
+        "中断",
+        "DMA",
+        "程序查询",
+        "I/O接口",
+        "状态寄存器",
+        "direct memory access",
+        "interrupt"
+      ],
+      "order": 16,
+      "why_questions": [
+        "中断和DMA如何减少CPU持续轮询或逐字节搬运？"
+      ],
+      "transfer_prompt": "若设备传输的数据块很小，DMA的初始化开销是否仍划算？需要比较什么？",
+      "transfer_hint": "比较固定管理开销与传输规模。"
+    },
+    {
+      "id": "os_process_thread",
+      "subject": "操作系统",
+      "title": "进程、线程与状态转换",
+      "summary": "进程提供资源分配与保护边界，线程是进程内的执行路径。就绪表示等待CPU，阻塞表示等待事件；事件完成通常让阻塞进程回到就绪，而不是直接运行。",
+      "prerequisites": [],
+      "checklist": [
+        "能根据等待原因判断就绪或阻塞",
+        "能区分进程共享资源和线程私有执行状态"
+      ],
+      "common_mistakes": [
+        "把阻塞理解为仅仅等待CPU",
+        "认为同进程线程没有共享状态风险"
+      ],
+      "keywords": [
+        "进程",
+        "线程",
+        "PCB",
+        "就绪",
+        "阻塞",
+        "状态转换",
+        "process",
+        "thread"
+      ],
+      "order": 17,
+      "why_questions": [
+        "进程和线程为何既有共享又有隔离的状态？"
+      ],
+      "transfer_prompt": "若把两个线程拆到两个进程，哪些通信和保护成本会改变？",
+      "transfer_hint": "分别检查地址空间、资源共享和上下文切换信息。"
+    },
+    {
+      "id": "os_cpu_scheduling",
+      "subject": "操作系统",
+      "title": "处理机调度",
+      "summary": "FCFS、SJF、优先级和时间片轮转在平均等待、响应、公平及切换开销方面各有取舍。周转时间为完成时刻减到达时刻；带权周转时间还要除以服务时间。",
+      "prerequisites": [
+        "os_process_thread"
+      ],
+      "checklist": [
+        "能按调度规则绘制甘特图并计算等待时间",
+        "能区分周转时间和带权周转时间"
+      ],
+      "common_mistakes": [
+        "把响应时间、等待时间和周转时间混用",
+        "忽略抢占规则及到达时刻"
+      ],
+      "keywords": [
+        "FCFS",
+        "SJF",
+        "时间片轮转",
+        "优先级调度",
+        "等待时间",
+        "周转时间",
+        "scheduling"
+      ],
+      "order": 18,
+      "why_questions": [
+        "调度策略为何会在响应、公平和吞吐间产生取舍？"
+      ],
+      "transfer_prompt": "若时间片缩短而进程数不变，响应、切换开销和公平性可能怎样变化？",
+      "transfer_hint": "同时考虑等待队列进展和上下文切换频率。"
+    },
+    {
+      "id": "os_synchronization",
+      "subject": "操作系统",
+      "title": "临界区与信号量同步",
+      "summary": "临界区协议要求互斥、进步和有限等待。信号量P/V操作必须原子执行；生产者消费者常用empty、full表示空槽和产品数，用mutex保护缓冲区临界区。",
+      "prerequisites": [
+        "os_process_thread"
+      ],
+      "checklist": [
+        "能根据共享资源写出P/V执行顺序",
+        "能检查初值、互斥和同步约束是否一致"
+      ],
+      "common_mistakes": [
+        "在持有互斥量时等待资源计数",
+        "遗漏释放操作或把P/V次序写反"
+      ],
+      "keywords": [
+        "临界区",
+        "互斥",
+        "信号量",
+        "P操作",
+        "V操作",
+        "生产者消费者",
+        "semaphore"
+      ],
+      "order": 19,
+      "why_questions": [
+        "信号量初值和P/V顺序如何编码资源约束与执行先后？"
+      ],
+      "transfer_prompt": "若缓冲区容量从1变为多个槽，哪些计数信号量和互斥保护需要调整？",
+      "transfer_hint": "分开表达可用槽、已有项目和临界区互斥。"
+    },
+    {
+      "id": "os_deadlock",
+      "subject": "操作系统",
+      "title": "死锁条件与处理",
+      "summary": "互斥、占有并等待、不可剥夺和循环等待是死锁的四个必要条件。预防通过破坏必要条件，避免通过安全性检查控制分配；不安全状态不等于已经发生死锁。",
+      "prerequisites": [
+        "os_synchronization"
+      ],
+      "checklist": [
+        "能列出四个必要条件并判断资源图中的等待环",
+        "能区分预防、避免、检测和恢复"
+      ],
+      "common_mistakes": [
+        "把安全状态检查和死锁检测混为一谈",
+        "认为所有不安全状态都已经死锁"
+      ],
+      "keywords": [
+        "死锁",
+        "占有并等待",
+        "循环等待",
+        "安全状态",
+        "银行家算法",
+        "deadlock"
+      ],
+      "order": 20,
+      "why_questions": [
+        "预防与避免对资源分配分别施加什么约束？"
+      ],
+      "transfer_prompt": "若某资源允许安全剥夺，四个必要条件中哪一项可能被破坏？说明理由。",
+      "transfer_hint": "逐项检查必要条件，不把不安全直接等同死锁。"
+    },
+    {
+      "id": "os_paging_virtual_memory",
+      "subject": "操作系统",
+      "title": "分页与虚拟内存",
+      "summary": "虚拟地址由虚页号和页内偏移组成，页表将虚页号映射到物理页框，偏移保持不变。缺页异常可触发页面调入；TLB缓存近期页表项以减少地址转换访存。",
+      "prerequisites": [
+        "os_process_thread"
+      ],
+      "checklist": [
+        "能按页大小拆分地址并完成页表转换",
+        "能描述缺页处理的主要步骤"
+      ],
+      "common_mistakes": [
+        "把缺页异常当作非法访问",
+        "地址转换时错误改变页内偏移"
+      ],
+      "keywords": [
+        "分页",
+        "虚拟内存",
+        "页表",
+        "页框",
+        "TLB",
+        "缺页异常",
+        "virtual memory",
+        "paging"
+      ],
+      "order": 21,
+      "why_questions": [
+        "分页如何把虚拟地址空间与物理内存分离？"
+      ],
+      "transfer_prompt": "若页大小扩大一倍，页内偏移和页表项数量趋势如何变化？",
+      "transfer_hint": "固定地址空间大小，比较页数与偏移位数。"
+    },
+    {
+      "id": "os_page_replacement",
+      "subject": "操作系统",
+      "title": "页面置换与抖动",
+      "summary": "OPT用未来最久未访问页作理论参照，FIFO可能出现Belady异常，LRU利用近期访问历史，时钟算法用访问位近似LRU。工作集过大而页框不足可能导致抖动。",
+      "prerequisites": [
+        "os_paging_virtual_memory"
+      ],
+      "checklist": [
+        "能按引用串和指定算法逐步更新页框",
+        "能解释Belady异常和工作集"
+      ],
+      "common_mistakes": [
+        "把OPT误认为可直接实现的在线算法",
+        "计算缺页时漏掉初始装入或命中"
+      ],
+      "keywords": [
+        "页面置换",
+        "FIFO",
+        "LRU",
+        "OPT",
+        "时钟算法",
+        "Belady异常",
+        "page replacement",
+        "页面置换算法"
+      ],
+      "order": 22,
+      "why_questions": [
+        "FIFO与LRU分别依赖队列次序和访问历史的什么信息？"
+      ],
+      "transfer_prompt": "若访问序列局部性增强，LRU类策略的表现为何可能改善？",
+      "transfer_hint": "观察最近使用页面是否更可能再次被访问。"
+    },
+    {
+      "id": "os_file_system",
+      "subject": "操作系统",
+      "title": "文件系统与磁盘空间管理",
+      "summary": "目录项关联名称与文件标识，inode等结构保存元数据和数据块索引。连续、链式和索引分配在顺序访问、随机访问及碎片方面取舍不同；空闲空间可用位图等管理。",
+      "prerequisites": [
+        "os_process_thread"
+      ],
+      "checklist": [
+        "能比较文件分配方式的访问特性",
+        "能区分目录项保存的名称与文件元数据"
+      ],
+      "common_mistakes": [
+        "认为文件名必定保存在inode中",
+        "忽略连续分配扩展文件的困难"
+      ],
+      "keywords": [
+        "文件系统",
+        "目录项",
+        "inode",
+        "连续分配",
+        "链式分配",
+        "索引分配",
+        "file system"
+      ],
+      "order": 23,
+      "why_questions": [
+        "文件名、目录项、元数据和数据块为何分开组织？"
+      ],
+      "transfer_prompt": "若文件改为随机访问频繁，连续、链式与索引分配各自的代价如何变化？",
+      "transfer_hint": "按定位目标块所需的额外访问比较。"
+    },
+    {
+      "id": "os_io",
+      "subject": "操作系统",
+      "title": "I/O软件与设备管理",
+      "summary": "设备驱动将操作系统请求转换为设备命令；中断通知事件，DMA减少CPU逐字节搬运。缓冲平滑速度差，缓存保存可能重用的数据，SPOOLing用磁盘队列共享独占设备。",
+      "prerequisites": [
+        "os_process_thread"
+      ],
+      "checklist": [
+        "能比较中断、DMA、缓冲和缓存的作用",
+        "能说明设备驱动与设备控制器的分工"
+      ],
+      "common_mistakes": [
+        "把缓存与缓冲当作同一机制",
+        "认为DMA不需要设备驱动或CPU初始化"
+      ],
+      "keywords": [
+        "I/O",
+        "设备驱动",
+        "DMA",
+        "中断",
+        "缓冲",
+        "缓存",
+        "SPOOLing",
+        "device driver"
+      ],
+      "order": 24,
+      "why_questions": [
+        "缓冲与缓存分别解决什么不同的数据访问问题？"
+      ],
+      "transfer_prompt": "若设备速度变快但CPU处理速度不变，缓冲策略和中断频率需要重新考虑什么？",
+      "transfer_hint": "关注速率匹配、批处理和通知开销。"
+    },
+    {
+      "id": "os_disk_scheduling",
+      "subject": "操作系统",
+      "title": "磁盘访问与磁盘调度",
+      "summary": "磁盘访问时间包含寻道、旋转等待和传输时间。FCFS简单，SSTF选择最近请求但可能让远处请求饥饿；SCAN按方向扫描，LOOK只到当前方向最远请求后折返。",
+      "prerequisites": [
+        "os_io"
+      ],
+      "checklist": [
+        "能按磁头位置和请求队列计算移动顺序",
+        "能比较SSTF、SCAN和LOOK的风险"
+      ],
+      "common_mistakes": [
+        "忘记题目规定的起始方向或边界行为",
+        "把总磁头移动距离当作完整访问时间"
+      ],
+      "keywords": [
+        "磁盘调度",
+        "FCFS",
+        "SSTF",
+        "SCAN",
+        "LOOK",
+        "寻道时间",
+        "disk scheduling",
+        "磁盘调度算法"
+      ],
+      "order": 25,
+      "why_questions": [
+        "SSTF为何可能造成远端请求长期等待？"
+      ],
+      "transfer_prompt": "若磁头当前方向反过来，SCAN与LOOK的服务顺序有哪些变化？",
+      "transfer_hint": "分别确定边界规则和当前方向。"
+    },
+    {
+      "id": "cn_layering_encapsulation",
+      "subject": "计算机网络",
+      "title": "网络分层与封装",
+      "summary": "分层把通信功能划分为相对清晰的职责边界。发送端逐层增加协议控制信息形成封装，接收端逐层解析；相邻层通过服务接口交互，同层协议逻辑通信。",
+      "prerequisites": [],
+      "checklist": [
+        "能说明封装与解封装顺序",
+        "能区分层间服务和同层协议"
+      ],
+      "common_mistakes": [
+        "把协议和服务接口混为一谈",
+        "忽略每层增加的首部对长度的影响"
+      ],
+      "keywords": [
+        "网络分层",
+        "封装",
+        "解封装",
+        "协议",
+        "服务",
+        "PDU",
+        "encapsulation",
+        "protocol"
+      ],
+      "order": 26,
+      "why_questions": [
+        "分层为何能让协议实现与下层传输细节相对解耦？"
+      ],
+      "transfer_prompt": "若某层增加固定长度首部，端到端有效载荷和每层PDU长度如何变化？",
+      "transfer_hint": "把首部开销逐层计入。"
+    },
+    {
+      "id": "cn_link_framing",
+      "subject": "计算机网络",
+      "title": "数据链路层与差错检测",
+      "summary": "数据链路层把网络层数据封装成帧并处理链路差错等问题。CRC根据生成多项式计算冗余位用于检测；检测到错误不等于协议必然能够纠错或恢复。",
+      "prerequisites": [
+        "cn_layering_encapsulation"
+      ],
+      "checklist": [
+        "能按给定多项式完成简单CRC模二除法",
+        "能区分差错检测和差错纠正"
+      ],
+      "common_mistakes": [
+        "把CRC余数计算当作普通整数除法",
+        "把检测能力误当作绝对不会漏检"
+      ],
+      "keywords": [
+        "数据链路层",
+        "帧",
+        "CRC",
+        "差错检测",
+        "生成多项式",
+        "frame",
+        "cyclic redundancy check"
+      ],
+      "order": 27,
+      "why_questions": [
+        "CRC为何能检测许多突发错误但不能保证发现所有错误？"
+      ],
+      "transfer_prompt": "若生成多项式改变，如何判断某类错误模式是否可被检测？",
+      "transfer_hint": "把错误位串作为多项式，检查是否能被生成多项式整除。"
+    },
+    {
+      "id": "cn_ethernet_switching",
+      "subject": "计算机网络",
+      "title": "以太网与交换机转发",
+      "summary": "交换机根据学习到的源MAC地址建立转发表，并据目的MAC选择转发端口；未知目的地址通常泛洪到除入端口外的端口。交换机逐跳转发帧，不替代IP路由。",
+      "prerequisites": [
+        "cn_link_framing"
+      ],
+      "checklist": [
+        "能跟踪MAC地址表随帧学习的变化",
+        "能判断已知、未知及广播目的地址的转发行为"
+      ],
+      "common_mistakes": [
+        "以为交换机从帧的源IP学习MAC表",
+        "把二层交换和三层路由混淆"
+      ],
+      "keywords": [
+        "以太网",
+        "MAC地址",
+        "交换机",
+        "转发表",
+        "泛洪",
+        "Ethernet",
+        "switching"
+      ],
+      "order": 28,
+      "why_questions": [
+        "交换机根据源MAC学习、按目的MAC转发有何作用？"
+      ],
+      "transfer_prompt": "若主机移动到另一个端口，交换机怎样更新已有地址表？",
+      "transfer_hint": "跟踪新帧源地址学习和旧表项老化。"
+    },
+    {
+      "id": "cn_ip_subnet",
+      "subject": "计算机网络",
+      "title": "IPv4编址与子网划分",
+      "summary": "IPv4地址和掩码共同确定网络前缀与主机部分。按位与得到网络地址；子网划分从主机位借位形成更多子网，需遵循题目对网络地址、广播地址和可用主机数的约定。",
+      "prerequisites": [
+        "cn_layering_encapsulation"
+      ],
+      "checklist": [
+        "能由地址和掩码计算网络地址与广播地址",
+        "能根据子网数或主机数推导前缀长度"
+      ],
+      "common_mistakes": [
+        "将点分十进制直接按十进制做按位与",
+        "漏掉题目对特殊子网使用的假设"
+      ],
+      "keywords": [
+        "IPv4",
+        "子网掩码",
+        "网络地址",
+        "广播地址",
+        "CIDR",
+        "前缀长度",
+        "subnet mask"
+      ],
+      "order": 29,
+      "why_questions": [
+        "前缀长度如何划分网络部分与主机部分？"
+      ],
+      "transfer_prompt": "若网络前缀增加一位，可用子网数和每个子网地址数如何变化？",
+      "transfer_hint": "基于总地址位数和保留地址约定重算。"
+    },
+    {
+      "id": "cn_routing",
+      "subject": "计算机网络",
+      "title": "路由与转发表",
+      "summary": "路由器根据目的网络前缀和转发表选择下一跳及出接口。最长前缀匹配优先选择匹配位数最多的路由；路由算法负责形成路由信息，转发过程查表处理单个分组。",
+      "prerequisites": [
+        "cn_ip_subnet"
+      ],
+      "checklist": [
+        "能在多条匹配路由中执行最长前缀匹配",
+        "能区分路由计算与分组转发"
+      ],
+      "common_mistakes": [
+        "选择最短或最早匹配的前缀",
+        "把下一跳地址误写成最终目的主机地址"
+      ],
+      "keywords": [
+        "路由",
+        "转发表",
+        "最长前缀匹配",
+        "下一跳",
+        "路由器",
+        "routing table",
+        "longest prefix match"
+      ],
+      "order": 30,
+      "why_questions": [
+        "最长前缀匹配为何比任意匹配更适合分层路由？"
+      ],
+      "transfer_prompt": "若新增一条更具体的路由覆盖某子网，目的地址的下一跳如何变化？",
+      "transfer_hint": "找出所有匹配项后比较前缀长度。"
+    },
+    {
+      "id": "cn_arp",
+      "subject": "计算机网络",
+      "title": "ARP与本地链路交付",
+      "summary": "主机向同一局域网目的IP发送数据时，需要解析对应MAC地址；远端目的IP时，帧通常交付给默认网关的MAC，而IP目的地址仍是远端主机。ARP请求在本地链路广播。",
+      "prerequisites": [
+        "cn_ethernet_switching",
+        "cn_ip_subnet"
+      ],
+      "checklist": [
+        "能分别判断同网段和跨网段发送时帧的目的MAC",
+        "能说明ARP解析的作用范围"
+      ],
+      "common_mistakes": [
+        "跨网段发送时直接ARP查询远端主机MAC",
+        "认为路由器转发后IP目的地址变成下一跳"
+      ],
+      "keywords": [
+        "ARP",
+        "MAC解析",
+        "默认网关",
+        "本地链路",
+        "广播",
+        "address resolution protocol"
+      ],
+      "order": 31,
+      "why_questions": [
+        "跨网段通信时为什么链路层目的地址是网关而IP目的地址仍是远端主机？"
+      ],
+      "transfer_prompt": "若默认网关MAC缓存失效，主机在发出数据帧前需要做什么？",
+      "transfer_hint": "区分下一跳链路地址解析与最终IP目标。"
+    },
+    {
+      "id": "cn_transport_tcp_udp",
+      "subject": "计算机网络",
+      "title": "传输层端口与TCP/UDP",
+      "summary": "传输层端口区分主机上的应用进程。UDP提供无连接数据报传输；TCP提供面向连接的可靠字节流服务。TCP字节流不保留应用写入边界，应用层需自行定义消息边界。",
+      "prerequisites": [
+        "cn_layering_encapsulation"
+      ],
+      "checklist": [
+        "能比较TCP和UDP提供的服务",
+        "能解释端口号在复用分用中的作用"
+      ],
+      "common_mistakes": [
+        "认为TCP一次读操作对应对方一次写操作",
+        "把端口号当作主机地址"
+      ],
+      "keywords": [
+        "传输层",
+        "端口",
+        "TCP",
+        "UDP",
+        "字节流",
+        "复用",
+        "transport layer",
+        "socket"
+      ],
+      "order": 32,
+      "why_questions": [
+        "TCP字节流服务为何不保留应用写入的消息边界？"
+      ],
+      "transfer_prompt": "若应用需要保留消息边界，可在TCP之上怎样设计 framing？",
+      "transfer_hint": "考虑长度字段、分隔符或固定长度，并处理分段/合并读取。"
+    },
+    {
+      "id": "cn_tcp_reliability",
+      "subject": "计算机网络",
+      "title": "TCP可靠传输与确认",
+      "summary": "TCP用序号标识字节流中的数据位置，用确认号表达期望接收的下一个字节；数据载荷按字节推进序号，SYN和FIN控制位也各消耗一个序号。重传定时器和累计确认协同处理丢失，计算时需明确报文段载荷与标志位。",
+      "prerequisites": [
+        "cn_transport_tcp_udp"
+      ],
+      "checklist": [
+        "能按载荷长度推算序号与确认号",
+        "能跟踪丢包、重传及累计确认过程"
+      ],
+      "common_mistakes": [
+        "把确认号误认为已收到的最后一个字节序号",
+        "只按载荷长度递增而漏计SYN或FIN各消耗的一个序号"
+      ],
+      "keywords": [
+        "TCP序号",
+        "确认号",
+        "累计确认",
+        "重传",
+        "滑动窗口",
+        "sequence number",
+        "ACK",
+        "序号",
+        "SYN",
+        "FIN",
+        "TCP序号与确认号"
+      ],
+      "order": 33,
+      "why_questions": [
+        "确认号表示期望的下一个字节如何支持累计确认？"
+      ],
+      "transfer_prompt": "若接收方收到乱序数据段，序号和累计确认怎样反映缺口？",
+      "transfer_hint": "沿连续已接收字节范围推导确认点。"
+    },
+    {
+      "id": "cn_congestion_control",
+      "subject": "计算机网络",
+      "title": "流量控制与拥塞控制",
+      "summary": "流量控制避免发送方超过接收方缓冲能力，拥塞控制关注网络整体承载能力。TCP发送窗口受接收窗口与拥塞窗口共同约束；慢开始、拥塞避免、快重传等算法需按给定状态机和阈值规则计算。",
+      "prerequisites": [
+        "cn_tcp_reliability"
+      ],
+      "checklist": [
+        "能区分接收窗口和拥塞窗口的含义",
+        "能按阈值和丢包事件更新拥塞窗口"
+      ],
+      "common_mistakes": [
+        "把接收方缓冲压力和网络拥塞当成同一问题",
+        "在慢开始与拥塞避免阶段使用错误增长规则"
+      ],
+      "keywords": [
+        "流量控制",
+        "拥塞控制",
+        "rwnd",
+        "cwnd",
+        "慢开始",
+        "拥塞避免",
+        "congestion control"
+      ],
+      "order": 34,
+      "why_questions": [
+        "流量控制和拥塞控制为何观察不同的限制来源？"
+      ],
+      "transfer_prompt": "若接收窗口增大但拥塞窗口不变，发送方可用窗口如何变化？",
+      "transfer_hint": "比较两者约束中的较小值。"
+    },
+    {
+      "id": "cn_dns_http",
+      "subject": "计算机网络",
+      "title": "DNS与HTTP基础",
+      "summary": "DNS把域名解析为资源记录中的地址等信息，解析可经过递归或迭代查询并受缓存影响。HTTP是应用层请求响应协议；持久连接、缓存和状态管理由协议语义及实现配置共同决定。",
+      "prerequisites": [
+        "cn_transport_tcp_udp"
+      ],
+      "checklist": [
+        "能按递归或迭代方式梳理DNS查询路径",
+        "能从请求响应描述识别HTTP方法与状态信息"
+      ],
+      "common_mistakes": [
+        "把DNS解析等同于HTTP访问",
+        "认为所有HTTP连接都必然新建TCP连接"
+      ],
+      "keywords": [
+        "DNS",
+        "域名解析",
+        "递归查询",
+        "迭代查询",
+        "HTTP",
+        "请求响应",
+        "domain name system"
+      ],
+      "order": 35,
+      "why_questions": [
+        "DNS缓存如何减少重复查询，但又带来记录更新延迟？"
+      ],
+      "transfer_prompt": "若缓存TTL缩短，解析时延、查询负载和变更传播之间如何权衡？",
+      "transfer_hint": "分别考虑缓存命中频率和陈旧记录持续时间。"
+    },
+    {
+      "id": "ds_huffman",
+      "subject": "数据结构",
+      "title": "哈夫曼树与编码",
+      "summary": "以频率为权值反复合并最小两棵树可构造带权路径长度较小的前缀码；同频时树形可能不同，但代价相同。",
+      "prerequisites": [
+        "ds_tree_traversal"
+      ],
+      "checklist": [
+        "能逐步合并最小权值并计算WPL",
+        "能解释所用步骤对应的性质"
+      ],
+      "common_mistakes": [
+        "误把任意最优前缀码树的形状当作唯一"
+      ],
+      "keywords": [
+        "哈夫曼",
+        "Huffman",
+        "前缀码",
+        "带权路径长度",
+        "WPL",
+        "赫夫曼",
+        "哈夫曼树",
+        "哈夫曼算法"
+      ],
+      "order": 36,
+      "why_questions": [
+        "为什么每次合并当前最小的两项有助于构造最优前缀码？"
+      ],
+      "transfer_prompt": "频率为2、3、7的三个符号，按合并最小权值的方法构造树并计算WPL。",
+      "transfer_hint": "画每步合并后的新权值，再累加叶子深度乘频率。"
+    },
+    {
+      "id": "ds_btree",
+      "subject": "数据结构",
+      "title": "B树与B+树",
+      "summary": "多路平衡搜索树在一个结点保存多个关键字以降低树高；B+树数据记录集中在叶层，叶结点常链接，适合范围查找。具体阶的定义依教材约定。",
+      "prerequisites": [
+        "ds_tree_traversal"
+      ],
+      "checklist": [
+        "能依据阶约定插入关键字并分裂结点",
+        "能解释所用步骤对应的性质"
+      ],
+      "common_mistakes": [
+        "未先确认阶表示最大孩子数还是最小度"
+      ],
+      "keywords": [
+        "B树",
+        "B+树",
+        "B-tree",
+        "B+ tree",
+        "多路平衡查找树"
+      ],
+      "order": 37,
+      "why_questions": [
+        "结点存放多个关键字如何减少磁盘访问层数？"
+      ],
+      "transfer_prompt": "某B+树内部结点最多4个孩子。若题目没有说明叶结点最多关键字数，哪些分裂结果不能唯一确定？补齐必要条件后再描述检索路径。",
+      "transfer_hint": "区分内部结点的孩子数约束和叶结点关键字容量；没有叶容量/阶定义时，应指出信息不足，不猜分裂边界。"
+    },
+    {
+      "id": "ds_hash",
+      "subject": "数据结构",
+      "title": "散列查找与冲突处理",
+      "summary": "散列函数把关键字映射到表地址；冲突可用开放定址或链地址等方法处理。装填因子和聚集会影响探查长度，删除标记需保持探查链可达。",
+      "prerequisites": [
+        "ds_linear_list"
+      ],
+      "checklist": [
+        "能跟踪给定散列函数的插入和查找",
+        "能解释所用步骤对应的性质"
+      ],
+      "common_mistakes": [
+        "开放定址删除后直接置空可能破坏后续查找"
+      ],
+      "keywords": [
+        "散列",
+        "哈希",
+        "冲突",
+        "开放定址",
+        "链地址",
+        "装填因子",
+        "hashing"
+      ],
+      "order": 38,
+      "why_questions": [
+        "为什么散列查找仍可能退化到多次探查？"
+      ],
+      "transfer_prompt": "表长11，散列函数H(k)=k mod 11，线性探查插入22、33、44后查找33需访问哪些位置？",
+      "transfer_hint": "依次计算余数并按探查规则模拟，不要假设无冲突。"
+    },
+    {
+      "id": "ds_graph_algorithms",
+      "subject": "数据结构",
+      "title": "最小生成树与最短路径",
+      "summary": "最小生成树连接连通无向带权图的全部顶点且总边权最小；最短路径优化指定起点到终点的路径长度。两者目标不同，算法适用条件也不同。",
+      "prerequisites": [
+        "ds_graph_traversal"
+      ],
+      "checklist": [
+        "能区分生成树边集与路径问题",
+        "能解释所用步骤对应的性质"
+      ],
+      "common_mistakes": [
+        "把最小生成树路径误当作图上最短路径"
+      ],
+      "keywords": [
+        "最小生成树",
+        "Prim",
+        "Kruskal",
+        "最短路径",
+        "Dijkstra",
+        "Floyd",
+        "MST"
+      ],
+      "order": 39,
+      "why_questions": [
+        "为什么连接全图代价最小不能推出任意两点间路径最短？"
+      ],
+      "transfer_prompt": "给一连通无向图新增一条权重严格大于现有树所有边权的边，判断Kruskal构造的最小生成树是否会选它，并说明对源点最短路径是否可能有影响。",
+      "transfer_hint": "先分别写清优化目标，再用环路性质判断重边能否进入MST；最短路径需结合端点与边权另算。"
+    },
+    {
+      "id": "cn_physical_signaling",
+      "subject": "计算机网络",
+      "title": "物理层信号、编码与信道容量",
+      "summary": "物理层把比特表示为可在介质上传输的信号；码元速率、比特率和带宽受编码方式及信道条件影响。奈奎斯特与香农公式对应不同理想化假设。",
+      "prerequisites": [
+        "cn_layering_encapsulation"
+      ],
+      "checklist": [
+        "能区分码元速率和比特率",
+        "能解释所用步骤对应的性质"
+      ],
+      "common_mistakes": [
+        "混淆奈奎斯特无噪声上限与香农有噪声容量"
+      ],
+      "keywords": [
+        "物理层",
+        "奈奎斯特",
+        "香农",
+        "信道容量",
+        "码元速率",
+        "波特率",
+        "Nyquist",
+        "Shannon",
+        "曼彻斯特编码",
+        "差分曼彻斯特",
+        "奈奎斯特准则",
+        "香农公式"
+      ],
+      "order": 40,
+      "why_questions": [
+        "为什么增加每码元携带的比特数并不保证信道可靠速率无限增加？"
+      ],
+      "transfer_prompt": "无噪声信道带宽B固定，码元速率保持每秒2B，信号每码元电平数从2增至4，按奈奎斯特准则计算理想比特率如何变化？",
+      "transfer_hint": "先写码元速率与每码元比特数，再按奈奎斯特公式计算；实际噪声约束需另看香农容量。"
+    },
+    {
+      "id": "ds_block_search",
+      "subject": "数据结构",
+      "title": "分块查找与索引",
+      "summary": "分块查找把有序块间索引与块内顺序查找结合；索引块的组织和块内是否有序决定查找步骤。平均代价取决于块数、块大小及分布假设。",
+      "prerequisites": [
+        "ds_linear_list"
+      ],
+      "checklist": [
+        "能按索引和块内查找两阶段定位元素",
+        "能说明块大小对两阶段代价的影响"
+      ],
+      "common_mistakes": [
+        "把索引有序误当作整个表全局有序",
+        "忽略题目给定的块大小与分布"
+      ],
+      "keywords": [
+        "分块查找",
+        "索引顺序查找",
+        "索引块",
+        "块内查找",
+        "block search"
+      ],
+      "order": 41,
+      "why_questions": [
+        "为什么分块查找要先定位块、再在块内查找？"
+      ],
+        "transfer_prompt": "有100个记录，按序分成10块，每块内无序；块间有序且前块所有关键字小于后块所有关键字。索引比较命中第7块后还需做什么？",
+        "transfer_hint": "分清索引比较和块内搜索；块内无序时不能直接折半，块间全序条件保证可唯一定位候选块。"
+    },
+    {
+      "id": "ds_aoe_critical_path",
+      "subject": "数据结构",
+      "title": "AOE网与关键路径",
+      "summary": "AOE网以活动为边、事件为顶点表示工程先后依赖。关键路径是从源点到汇点的最长路径，决定工程最短完成时间；活动余量需由事件最早、最迟时刻推算。",
+      "prerequisites": [
+        "ds_graph_algorithms"
+      ],
+      "checklist": [
+        "能按拓扑序计算事件最早时刻",
+        "能反向计算最迟时刻并求活动余量"
+      ],
+      "common_mistakes": [
+        "把关键路径误当最短路径",
+        "多条关键路径时只报告一条而忽略并列情况"
+      ],
+      "keywords": [
+        "AOE网",
+        "关键路径",
+        "活动最早开始",
+        "活动最迟开始",
+        "事件最早发生时间",
+        "事件最迟发生时间"
+      ],
+      "order": 42,
+      "why_questions": [
+        "为什么工程总工期由最长依赖路径决定？"
+      ],
+      "transfer_prompt": "活动A持续3天后并行开展B(4天)和C(6天)，二者完成后活动D持续2天。求最短工期及关键活动。",
+      "transfer_hint": "先画依赖关系；并行分支取较长完成时刻，再加汇合后的活动。"
+    },
+    {
+      "id": "co_integer_conversion",
+      "subject": "计算机组成原理",
+      "title": "整数类型转换与机器数解释",
+      "summary": "类型转换先确定源/目标位宽、符号扩展或零扩展、截断规则，再解释结果位串。C语言整数提升和有符号/无符号混合运算依具体类型宽度与规则判断。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能按位宽写出符号扩展和零扩展结果",
+        "能区分位串变化与数值解释变化"
+      ],
+      "common_mistakes": [
+        "只看十进制值而漏掉转换类型",
+        "把截断后的位串仍按原类型解释"
+      ],
+      "keywords": [
+        "整数类型转换",
+        "类型转换",
+        "符号扩展",
+        "零扩展",
+        "强制类型转换",
+        "short型",
+        "unsigned"
+      ],
+      "order": 43,
+      "why_questions": [
+        "为什么相同位串在不同有符号性或位宽下数值不同？"
+      ],
+      "transfer_prompt": "将8位补码-8先符号扩展到16位，再按无符号16位解释，写出位串和十进制值。",
+      "transfer_hint": "先写8位补码，再复制符号位扩展；最后按无符号解释该16位串。"
+    },
+    {
+      "id": "co_ieee754",
+      "subject": "计算机组成原理",
+      "title": "IEEE 754浮点数表示与舍入",
+      "summary": "单精度浮点数由符号位、偏置指数和有效数小数字段组成。把数值规范化后编码，并按题设舍入规则处理超出字段的尾数；指数范围、特殊值和舍入模式都要单独检查。",
+      "prerequisites": [
+        "co_data_representation"
+      ],
+      "checklist": [
+        "能分解符号、指数和尾数字段",
+        "能按给定舍入模式判断最终位串"
+      ],
+      "common_mistakes": [
+        "忘记单精度指数偏置",
+        "把规格化形式的隐藏位写入尾数字段"
+      ],
+      "keywords": [
+        "IEEE 754",
+        "IEEE754",
+        "单精度",
+        "双精度",
+        "浮点数",
+        "浮点数机器数",
+        "就近舍入",
+        "阶码",
+        "尾数"
+      ],
+      "order": 44,
+      "why_questions": [
+        "指数偏置和有效数分别解决浮点表示中的什么问题？"
+      ],
+      "transfer_prompt": "把十进制12.5转为IEEE 754单精度，先写二进制规格化形式，再划分符号、指数与尾数（本题恰可精确表示）。",
+      "transfer_hint": "12.5先化为二进制，再规格化；本例小数二进制有限，可用于核对字段而不涉及舍入。"
+    },
+    {
+      "id": "co_byte_order_alignment",
+      "subject": "计算机组成原理",
+      "title": "字节序与数据对齐",
+      "summary": "多字节数据在内存中的字节序规定高低有效字节的地址排列；对齐约束规定对象地址与边界的关系，可能影响访问次数和结构体填充。字节序不改变数值本身。",
+      "prerequisites": [
+        "co_data_representation",
+        "co_memory_hierarchy"
+      ],
+      "checklist": [
+        "能从字节序画出多字节数的地址布局",
+        "能按边界约束计算填充字节"
+      ],
+      "common_mistakes": [
+        "把小端存储理解为数值位序反转",
+        "忽略结构体成员之间及尾部对齐填充"
+      ],
+      "keywords": [
+        "大端",
+        "小端",
+        "字节序",
+        "端序",
+        "对齐",
+        "边界对齐",
+        "字节排列",
+        "endianness",
+        "alignment"
+      ],
+      "order": 45,
+      "why_questions": [
+        "字节序为何影响内存字节的观察顺序，却不改变整数的数学值？"
+      ],
+      "transfer_prompt": "32位数0x12345678从地址100开始存放，分别写出大端和小端四个地址的字节；再判断起始地址改为102是否满足4字节对齐。",
+      "transfer_hint": "大端高字节放低地址，小端低字节放低地址；4字节对齐检查地址能否被4整除。"
+    },
+    {
+      "id": "co_bus",
+      "subject": "计算机组成原理",
+      "title": "总线带宽、突发传输与仲裁",
+      "summary": "总线传输能力由数据宽度、时钟/传输频率和每次传输周期等共同决定。突发传输可摊薄地址与仲裁开销；多主设备竞争时由仲裁机制决定总线使用权。",
+      "prerequisites": [
+        "co_cpu_datapath",
+        "co_io_interrupt_dma"
+      ],
+      "checklist": [
+        "能从宽度与频率计算理论传输率",
+        "能区分总线仲裁与数据传输阶段"
+      ],
+      "common_mistakes": [
+        "混淆时钟频率与每秒传输次数",
+        "算带宽时忽略单位换算和总线利用率"
+      ],
+      "keywords": [
+        "总线带宽",
+        "总线事务",
+        "总线仲裁",
+        "突发传输",
+        "总线周期",
+        "数据总线宽度"
+      ],
+      "order": 46,
+      "why_questions": [
+        "突发传输为何能提高连续访问效率？"
+      ],
+      "transfer_prompt": "一条32位总线每秒传输1000次，每次传输一个数据单位，理论峰值带宽是多少？若地址阶段每4次数据传输增加1次开销，有效带宽如何变化？",
+      "transfer_hint": "分别计算无开销峰值与含地址阶段后的总周期占比，注意bit和byte换算。"
+    },
+    {
+      "id": "os_virtualization",
+      "subject": "操作系统",
+      "title": "虚拟化与虚拟机监控",
+      "summary": "虚拟化抽象出虚拟硬件供多个客体系统运行。VMM负责资源隔离与虚拟硬件管理；不同虚拟化方案可采用陷入模拟、硬件辅助或动态二进制转换，不能只凭“虚拟机”断言指令集相同。",
+      "prerequisites": [
+        "os_process_thread",
+        "co_instruction_format"
+      ],
+      "checklist": [
+        "能区分宿主机、VMM与客体操作系统",
+        "能判断指令集兼容和虚拟化层的关系"
+      ],
+      "common_mistakes": [
+        "把虚拟化等同于虚拟内存",
+        "认为所有虚拟机都模拟不同指令集"
+      ],
+      "keywords": [
+        "虚拟化",
+        "虚拟机",
+        "VMM",
+        "虚拟机监控程序",
+        "宿主机",
+        "客体操作系统"
+      ],
+      "order": 47,
+      "why_questions": [
+        "VMM如何在多个客体之间提供隔离并复用物理资源？"
+      ],
+      "transfer_prompt": "一台主机同时运行两个相同ISA的客体系统。说明它们可共享哪些物理资源抽象，以及VMM仍需隔离哪些状态。",
+      "transfer_hint": "从CPU状态、内存映射、设备访问与调度四方面逐项分析。"
+    },
+    {
+      "id": "cn_circuit_switching",
+      "subject": "计算机网络",
+      "title": "电路、报文与分组交换时延",
+      "summary": "电路交换先建立专用通信路径，后续传输时延较稳定；报文交换整条存储转发；分组交换分段转发并可流水。比较时要分开建立时延、传输时延、传播时延和排队/存储转发项。",
+      "prerequisites": [
+        "cn_layering_encapsulation"
+      ],
+      "checklist": [
+        "能按交换方式画出各段时延组成",
+        "能对多链路分组流水传输求完成时间"
+      ],
+      "common_mistakes": [
+        "分组交换漏掉首包存储转发或流水重叠",
+        "把传播时延和传输时延混为一项"
+      ],
+      "keywords": [
+        "电路交换",
+        "报文交换",
+        "分组交换",
+        "建立电路",
+        "存储转发",
+        "端到端时延"
+      ],
+      "order": 48,
+      "why_questions": [
+        "分组交换为何能流水传输，但首包仍需经历逐跳转发？"
+      ],
+      "transfer_prompt": "文件分成4个等长分组，经过3条等速链路，每条链路每组传输时间为2ms、传播时延忽略，采用存储转发并允许流水。估计全部分组到达所需时间。",
+      "transfer_hint": "第一个分组需要逐跳传完；后续分组流水，按链路数和分组数计算。"
+    },
+    {
+      "id": "cn_hamming_code",
+      "subject": "计算机网络",
+      "title": "汉明码与差错纠正",
+      "summary": "汉明码用校验位覆盖若干位位置，接收端由校验结果形成综合症并定位单比特错误。校验位数量由可区分的错误位置数决定；纠错能力取决于码的最小汉明距离。",
+      "prerequisites": [
+        "cn_link_framing"
+      ],
+      "checklist": [
+        "能按位置编号计算偶校验汉明码校验位",
+        "能由综合症判断单比特错误位置"
+      ],
+      "common_mistakes": [
+        "把综合症二进制位次顺序写反",
+        "把单错纠正能力推广到任意多位错误"
+      ],
+      "keywords": [
+        "汉明码",
+        "海明码",
+        "汉明距",
+        "海明距离",
+        "综合症",
+        "纠错码",
+        "奇偶校验位"
+      ],
+      "order": 49,
+      "why_questions": [
+        "校验位覆盖模式为何能把错误位置编码为综合症？"
+      ],
+      "transfer_prompt": "采用偶校验的(7,4)汉明码，编号1至7，校验位位于1、2、4，收到的综合症为二进制101（位4为高位），定位哪一位可能出错？",
+      "transfer_hint": "综合症按位权解码为位置编号；本题只讨论单比特错误假设。"
+    },
+    {
+      "id": "ds_dynamic_programming",
+      "subject": "数据结构",
+      "title": "动态规划与状态设计",
+      "summary": "动态规划适用于具有重叠子问题和可复用最优子结构的问题。先定义状态和下标含义，再写状态转移、初值与计算顺序；优化空间时要验证旧状态何时仍可用。",
+      "prerequisites": [
+        "ds_sort_search"
+      ],
+      "checklist": [
+        "能说明状态变量代表的子问题",
+        "能从转移依赖确定遍历顺序并验证边界"
+      ],
+      "common_mistakes": [
+        "状态含义不明确导致转移式无法解释",
+        "滚动数组时覆盖仍需使用的旧状态"
+      ],
+      "keywords": [
+        "动态规划",
+        "状态转移",
+        "最优子结构",
+        "重叠子问题",
+        "滚动数组",
+        "dynamic programming",
+        "DP"
+      ],
+      "order": 50,
+      "why_questions": [
+        "状态设计为何决定转移是否完整且可计算？"
+      ],
+      "transfer_prompt": "给定数组[2,-1,3]，定义dp[i]为必须以i结尾的连续子数组最大和。写出转移、初值并求最大值。",
+      "transfer_hint": "以i结尾时只能延长前一段或从当前元素重新开始；最后在各i状态中取最大。"
+    },
+    {
+      "id": "cn_medium_access",
+      "subject": "计算机网络",
+      "title": "共享介质访问与冲突退避",
+      "summary": "共享介质访问控制协调多个站点发送。共享半双工以太网CSMA/CD在发送中侦听并检测碰撞，检测到后终止发送再退避；无线CSMA/CA通过预约、确认和随机等待降低碰撞风险，两者工作环境和检测能力不同。",
+      "prerequisites": [
+        "cn_link_framing"
+      ],
+      "checklist": [
+        "能区分CSMA/CD与CSMA/CA的冲突处理条件",
+        "能按二进制指数退避范围计算等待槽数"
+      ],
+      "common_mistakes": [
+        "把无线网络的碰撞避免当作能够检测碰撞",
+        "退避时漏算竞争窗口范围或时隙长度"
+      ],
+      "keywords": [
+        "CSMA/CD",
+        "CSMA/CA",
+        "二进制指数退避",
+        "退避算法",
+        "冲突检测",
+        "冲突避免",
+        "802.11",
+        "争用期",
+        "竞争窗口"
+      ],
+      "order": 51,
+      "why_questions": [
+        "无线局域网为什么更常采用冲突避免而非边发送边检测？"
+      ],
+      "transfer_prompt": "某CSMA/CD网络退避时隙为51.2微秒，发生3次连续冲突，按二进制指数退避算法，随机整数k的范围及最大等待时间是多少？",
+      "transfer_hint": "发生n次连续碰撞时，经典二进制指数退避取k∈[0, 2^min(n,10)−1]；再乘时隙长度，达到16次连续碰撞则报告失败。无线CSMA/CA的窗口规则另按题设处理。"
+    }
+  ]
+}

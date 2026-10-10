@@ -1,0 +1,8 @@
+# Python 3.12, Windows x64; setup.ps1 records the resolved versions in installed-versions.txt.
+streamlit>=1.40,<2
+numpy>=1.26,<3
+jieba>=0.42.1,<1
+rank-bm25>=0.2.2,<1
+pypdf[crypto]>=5,<7
+pypdfium2>=4.30,<6
+httpx>=0.27,<1

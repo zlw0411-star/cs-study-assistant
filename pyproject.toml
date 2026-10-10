@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68,<82"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cs-study-assistant"
+version = "0.1.0"
+description = "Local-first Chinese 408 study assistant"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "streamlit>=1.40,<2",
+  "numpy>=1.26,<3",
+  "jieba>=0.42.1,<1",
+  "rank-bm25>=0.2.2,<1",
+  "pypdf[crypto]>=5,<7",
+  "pypdfium2>=4.30,<6",
+  "httpx>=0.27,<1",
+]
+
+[project.optional-dependencies]
+models = ["sentence-transformers>=3.3,<6"]
+dev = ["pytest>=8,<9"]
+
+[tool.setuptools.packages.find]
+include = ["study_assistant*"]

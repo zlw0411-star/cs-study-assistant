@@ -1,0 +1,62 @@
+{
+  "split": "dev",
+  "methods_requested": [
+    "bm25"
+  ],
+  "methods_measured": [
+    "bm25"
+  ],
+  "question_count": 20,
+  "generation_requested": true,
+  "generation_available": false,
+  "dense_warmup_ms": null,
+  "startup_warmup_ms_by_method": {
+    "bm25": 533.7295000008453
+  },
+  "errors": {
+    "ollama_tags": "ConnectError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。",
+    "generation_warmup": "Ollama 请求失败或返回了无效 JSON：[WinError 10061] 由于目标计算机积极拒绝，无法连接。"
+  },
+  "python": "3.12.14",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "package_versions": {
+    "numpy": "2.5.3",
+    "jieba": "0.42.1",
+    "rank-bm25": "0.2.2",
+    "pypdf": "6.20.0",
+    "streamlit": "1.65.0",
+    "sentence-transformers": "5.7.0",
+    "httpx": "0.28.1"
+  },
+  "embedder": "BAAI/bge-small-zh-v1.5@7999e1d3359715c523056ef9478215996d62a620|normalized|query-instruction-v1",
+  "embedder_revision": "7999e1d3359715c523056ef9478215996d62a620",
+  "embedder_resolved_revision": null,
+  "generation_model": "qwen3:4b",
+  "generation_model_digest": null,
+  "generation_options": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 768
+  },
+  "evaluation_data_sha256": "313a88b35fdf25feaca26811febef667d9d095e0e88853e819830710a835af11",
+  "notes_sha256": "19f200f0a3654354a497753e26b1986a4e5a9ad4351ae94a41bac84fc8be14c3",
+  "metrics_by_method": {
+    "bm25": {
+      "hit_at_5": 1.0,
+      "answerable_count": 20,
+      "multi_source_coverage": null,
+      "multi_source_question_count": 0,
+      "retrieval_ms_mean": 9.011959999952524,
+      "retrieval_ms_p95": 9.144199999354896,
+      "generation_success_rate": null,
+      "valid_citation_rate": null,
+      "model_refusal_rate": null,
+      "correct_refusal_rate_unanswerable": null,
+      "over_refusal_rate_answerable": null,
+      "system_no_hit_refusal_rate_unanswerable": null,
+      "manual_answer_correctness": null,
+      "manual_citation_support": null
+    }
+  },
+  "manual_scoring_required": true
+}

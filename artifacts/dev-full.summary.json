@@ -1,0 +1,102 @@
+{
+  "split": "dev",
+  "methods_requested": [
+    "bm25",
+    "dense",
+    "hybrid"
+  ],
+  "methods_measured": [
+    "bm25",
+    "dense",
+    "hybrid"
+  ],
+  "question_count": 20,
+  "generation_requested": true,
+  "generation_available": false,
+  "dense_warmup_ms": 9006.265699999858,
+  "startup_warmup_ms_by_method": {
+    "bm25": 550.7442999987688,
+    "dense": 13.554299999668729,
+    "hybrid": 33.215600000403356
+  },
+  "errors": {
+    "generation_warmup": "模型回答正文引用与 JSON citations 字段不一致。"
+  },
+  "python": "3.12.14",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "package_versions": {
+    "numpy": "2.5.3",
+    "jieba": "0.42.1",
+    "rank-bm25": "0.2.2",
+    "pypdf": "6.20.0",
+    "streamlit": "1.65.0",
+    "sentence-transformers": "5.7.0",
+    "httpx": "0.28.1"
+  },
+  "embedder": "BAAI/bge-small-zh-v1.5@7999e1d3359715c523056ef9478215996d62a620|normalized|query-instruction-v1",
+  "embedder_revision": "7999e1d3359715c523056ef9478215996d62a620",
+  "embedder_resolved_revision": null,
+  "generation_model": "qwen3:4b",
+  "generation_model_digest": "ceece7596a19f0c3344f01b1cc23cc6464c7c8c3885dbf1ef64f16bbca2062c6",
+  "generation_options": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 768
+  },
+  "evaluation_data_sha256": "313a88b35fdf25feaca26811febef667d9d095e0e88853e819830710a835af11",
+  "notes_sha256": "19f200f0a3654354a497753e26b1986a4e5a9ad4351ae94a41bac84fc8be14c3",
+  "metrics_by_method": {
+    "bm25": {
+      "hit_at_5": 1.0,
+      "answerable_count": 20,
+      "multi_source_coverage": null,
+      "multi_source_question_count": 0,
+      "retrieval_ms_mean": 9.3433099998947,
+      "retrieval_ms_p95": 10.192699999606702,
+      "generation_success_rate": null,
+      "valid_citation_rate": null,
+      "model_refusal_rate": null,
+      "correct_refusal_rate_unanswerable": null,
+      "over_refusal_rate_answerable": null,
+      "system_no_hit_refusal_rate_unanswerable": null,
+      "system_no_hit_rate_answerable": 0.0,
+      "manual_answer_correctness": null,
+      "manual_citation_support": null
+    },
+    "dense": {
+      "hit_at_5": 0.95,
+      "answerable_count": 20,
+      "multi_source_coverage": null,
+      "multi_source_question_count": 0,
+      "retrieval_ms_mean": 10.549770000216085,
+      "retrieval_ms_p95": 15.800400000443915,
+      "generation_success_rate": null,
+      "valid_citation_rate": null,
+      "model_refusal_rate": null,
+      "correct_refusal_rate_unanswerable": null,
+      "over_refusal_rate_answerable": null,
+      "system_no_hit_refusal_rate_unanswerable": null,
+      "system_no_hit_rate_answerable": 0.0,
+      "manual_answer_correctness": null,
+      "manual_citation_support": null
+    },
+    "hybrid": {
+      "hit_at_5": 1.0,
+      "answerable_count": 20,
+      "multi_source_coverage": null,
+      "multi_source_question_count": 0,
+      "retrieval_ms_mean": 21.513339999910386,
+      "retrieval_ms_p95": 25.877100000798237,
+      "generation_success_rate": null,
+      "valid_citation_rate": null,
+      "model_refusal_rate": null,
+      "correct_refusal_rate_unanswerable": null,
+      "over_refusal_rate_answerable": null,
+      "system_no_hit_refusal_rate_unanswerable": null,
+      "system_no_hit_rate_answerable": 0.0,
+      "manual_answer_correctness": null,
+      "manual_citation_support": null
+    }
+  },
+  "manual_scoring_required": true
+}

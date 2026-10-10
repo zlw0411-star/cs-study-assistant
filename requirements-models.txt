@@ -1,0 +1,2 @@
+# Optional, heavyweight semantic-indexing dependencies. Install only when building BGE vectors.
+sentence-transformers>=3.3,<6

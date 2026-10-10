@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8,<9
+playwright>=1.48,<2
+imageio>=2.36,<3
+imageio-ffmpeg>=0.5,<1
