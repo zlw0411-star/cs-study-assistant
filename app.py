@@ -159,7 +159,7 @@ with st.sidebar:
             p.id for p in visible_papers if p.source_kind != "recall" or include_recall
         }
         questions_for_stats = exam.list_questions(
-            subject=None if subject == "待分类" else subject
+            subject=subject
         )
         counts_by_topic: dict[str, dict[str, int]] = {}
         for item in questions_for_stats:

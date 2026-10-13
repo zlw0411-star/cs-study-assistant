@@ -93,10 +93,41 @@ def test_seeded_question_page_renders_learning_and_topic_reflection_controls(tmp
     app.button(key="start_topic_learning").click().run()
     assert app.text_area(key="topic_principle_os_synchronization").value == reflection["principle_note"]
     assert app.text_area(key="topic_transfer_os_synchronization").value == reflection["transfer_note"]
-
     app.selectbox(key="year_filter").select("全部年份").run()
     app.selectbox(key="selected_question").select(newer_question.id).run()
     assert app.selectbox(key="progress_status").value == "需复习"
     assert app.checkbox(key="progress_wrong").value is True
     assert app.text_area(key="progress_notes").value == "遗漏了互斥信号量的释放步骤"
     assert bool(service.get_topic_progress("os_synchronization")["self_checked"])
+
+
+def test_unclassified_subject_sidebar_stats_exclude_other_subjects(tmp_path, monkeypatch):
+    streamlit_testing = pytest.importorskip("streamlit.testing.v1")
+    data_dir = tmp_path / "unclassified-filter"
+    service = ExamService(data_dir)
+    unclassified_paper = service.import_pdf(
+        "unclassified.pdf", _pdf_with_ascii_question("unclassified synthetic question"), year=2024
+    ).paper
+    unclassified_question = service.list_questions(paper_id=unclassified_paper.id)[0]
+    service.set_classification(unclassified_question.id, "待分类", [])
+
+    os_paper = service.import_pdf(
+        "os.pdf", _pdf_with_ascii_question("OS synthetic question"), year=2023
+    ).paper
+    os_question = service.list_questions(paper_id=os_paper.id)[0]
+    service.set_classification(os_question.id, "操作系统", ["os_synchronization"])
+    service.save_progress(os_question.id, status="review", is_wrong=True)
+
+    monkeypatch.setenv("CSA_DATA_DIR", str(data_dir))
+    app = streamlit_testing.AppTest.from_file(
+        str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=15
+    ).run()
+    assert not app.exception
+
+    app.selectbox(key="subject_filter").select("待分类").run()
+    assert any("当前筛选到 1 题" == item.value for item in app.caption)
+    assert not any("未解决错题" in item.value for item in app.caption)
+
+    app.selectbox(key="subject_filter").select("操作系统").run()
+    assert any("当前筛选到 1 题" == item.value for item in app.caption)
+    assert any("未解决错题 1" in item.value for item in app.caption)
