@@ -25,10 +25,13 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMessageBox,
+    QFrame,
+    QStackedWidget,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QSplitter,
+    QSizePolicy,
     QTabWidget,
     QTextBrowser,
     QVBoxLayout,
@@ -37,24 +40,38 @@ from PySide6.QtWidgets import (
 
 from .analysis import OnlineModelConfig
 from .materials import MaterialService
+from .desktop_theme import EmptyLibraryArt, apply_theme, make_icon
 
 
 _ALLOWED_SUFFIXES = {".pdf", ".docx", ".txt", ".md"}
-_STYLE = """
-QMainWindow, QDialog { background:#f4f8f7; color:#17343b; }
-QToolBar, QWidget#sidePanel, QWidget#contentPanel { background:#ffffff; }
-QToolBar { border:0; border-bottom:1px solid #dce8e5; spacing:8px; padding:8px; }
-QPushButton { padding:8px 12px; border:1px solid #d1e0dd; border-radius:8px; background:#fff; }
-QPushButton:hover { border-color:#0e8179; color:#0e8179; }
-QPushButton#analyzeButton { color:white; background:#0e8179; border-color:#0e8179; font-weight:600; }
-QListWidget, QPlainTextEdit, QTextBrowser, QLineEdit { background:#fff; border:1px solid #dce8e5; border-radius:8px; padding:6px; }
-QTabWidget::pane { background:#fff; border:1px solid #dce8e5; border-radius:8px; }
-QTabBar::tab { padding:9px 13px; }
-QTabBar::tab:selected { color:#0e8179; border-bottom:2px solid #0e8179; }
-QLabel#mutedLabel { color:#60777b; }
-QProgressBar { border:1px solid #dce8e5; border-radius:6px; text-align:center; }
-QProgressBar::chunk { background:#0e8179; border-radius:5px; }
-"""
+
+
+class ElidedLabel(QLabel):
+    def __init__(self, text: str = "", parent: QWidget | None = None):
+        super().__init__(text, parent)
+        self._full_text = text
+        self.setAccessibleName(text)
+        self.setToolTip(text)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+
+    def setFullText(self, text: str) -> None:
+        self._full_text = text
+        self.setText(text)
+        self.setAccessibleName(text)
+        self.setToolTip(text)
+        self.update()
+
+    def minimumSizeHint(self):
+        return self.fontMetrics().size(Qt.TextFlag.TextSingleLine, "…")
+
+    def paintEvent(self, event) -> None:
+        from PySide6.QtGui import QPainter
+
+        painter = QPainter(self)
+        painter.setPen(self.palette().color(self.foregroundRole()))
+        metrics = painter.fontMetrics()
+        rect = self.contentsRect()
+        painter.drawText(rect, self.alignment(), metrics.elidedText(self._full_text, Qt.TextElideMode.ElideRight, rect.width()))
 
 
 class ModelSettingsDialog(QDialog):
@@ -65,7 +82,10 @@ class ModelSettingsDialog(QDialog):
         self.setWindowTitle("在线模型设置")
         self.setObjectName("modelSettingsDialog")
         self.setMinimumWidth(440)
+        apply_theme(self)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(18)
         form = QFormLayout()
         self.base_url_edit = QLineEdit(base_url)
         self.base_url_edit.setObjectName("settingsBaseUrl")
@@ -85,6 +105,8 @@ class ModelSettingsDialog(QDialog):
         notice.setObjectName("settingsPrivacyNotice")
         layout.addWidget(notice)
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.button(QDialogButtonBox.StandardButton.Save).setText("保存设置")
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("取消")
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
@@ -114,126 +136,308 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("学习资料分析助手")
         self.setObjectName("mainWindow")
         self.setMinimumSize(900, 600)
-        self.resize(1200, 800)
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            self.resize(min(1280, max(900, available.width() - 72)), min(820, max(600, available.height() - 72)))
+        else:
+            self.resize(1200, 800)
         self.setAcceptDrops(True)
-        self.setStyleSheet(_STYLE)
+        apply_theme(self)
         self._build_ui()
         self._connect_jobs()
         self.refresh_library()
         self._update_controls()
 
     def _build_ui(self) -> None:
-        toolbar = self.addToolBar("资料分析")
-        toolbar.setObjectName("mainToolbar")
+        root = QWidget()
+        root.setObjectName("desktopRoot")
+        root_layout = QHBoxLayout(root)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        self.setCentralWidget(root)
+
+        self.sidebar = QWidget()
+        self.sidebar.setObjectName("sidebar")
+        self.sidebar.setFixedWidth(236)
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(16, 22, 16, 16)
+        sidebar_layout.setSpacing(12)
+        brand = QHBoxLayout()
+        self.brand_icon = QLabel()
+        self.brand_icon.setObjectName("brandIcon")
+        self.brand_icon.setPixmap(make_icon("book", size=28).pixmap(28, 28))
+        brand.addWidget(self.brand_icon, 0, Qt.AlignmentFlag.AlignTop)
+        brand_words = QVBoxLayout()
+        self.brand_title = QLabel("知页")
+        self.brand_title.setObjectName("brandTitle")
+        self.brand_subtitle = QLabel("学习资料助手")
+        self.brand_subtitle.setObjectName("brandSubtitle")
+        brand_words.addWidget(self.brand_title)
+        brand_words.addWidget(self.brand_subtitle)
+        brand.addLayout(brand_words, 1)
+        sidebar_layout.addLayout(brand)
+
+        library_heading = QHBoxLayout()
+        self.library_title = QLabel("资料库")
+        self.library_title.setObjectName("libraryTitle")
+        self.library_count = QLabel("0 份")
+        self.library_count.setObjectName("libraryCount")
+        library_heading.addWidget(self.library_title)
+        library_heading.addStretch(1)
+        library_heading.addWidget(self.library_count)
+        sidebar_layout.addLayout(library_heading)
+        self.library_list = QListWidget()
+        self.library_list.setObjectName("materialList")
+        self.library_list.setSpacing(7)
+        self.library_list.setFrameShape(QFrame.Shape.NoFrame)
+        self.library_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.library_list.currentItemChanged.connect(self._on_material_changed)
+        sidebar_layout.addWidget(self.library_list, 1)
+
         self.settings_action = QAction("模型设置", self)
         self.settings_action.setObjectName("settingsAction")
         self.settings_action.triggered.connect(self.open_settings)
-        toolbar.addAction(self.settings_action)
-        toolbar.addSeparator()
-        self.analyze_button = QPushButton("生成分析报告")
-        self.analyze_button.setObjectName("analyzeButton")
-        self.analyze_button.clicked.connect(self.start_analysis)
-        toolbar.addWidget(self.analyze_button)
-        self.cancel_button = QPushButton("停止")
-        self.cancel_button.setObjectName("cancelButton")
-        self.cancel_button.clicked.connect(self.cancel_job)
-        toolbar.addWidget(self.cancel_button)
-        toolbar.addSeparator()
-        self.export_md_button = QPushButton("导出 Markdown")
-        self.export_md_button.setObjectName("exportMarkdownButton")
-        self.export_md_button.clicked.connect(lambda: self._choose_export("md"))
-        toolbar.addWidget(self.export_md_button)
-        self.export_json_button = QPushButton("导出 JSON")
-        self.export_json_button.setObjectName("exportJsonButton")
-        self.export_json_button.clicked.connect(lambda: self._choose_export("json"))
-        toolbar.addWidget(self.export_json_button)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setObjectName("mainSplitter")
-        self.setCentralWidget(splitter)
-
-        library_panel = QWidget()
-        library_panel.setObjectName("sidePanel")
-        library_layout = QVBoxLayout(library_panel)
-        library_layout.setContentsMargins(12, 14, 12, 12)
-        library_title = QLabel("资料库")
-        library_title.setStyleSheet("font-size:18px;font-weight:700;color:#17343b")
-        library_layout.addWidget(library_title)
-        self.library_list = QListWidget()
-        self.library_list.setObjectName("materialList")
-        self.library_list.currentItemChanged.connect(self._on_material_changed)
-        library_layout.addWidget(self.library_list, 1)
-        self.import_button = QPushButton("导入资料…")
+        self.addAction(self.settings_action)
+        self.import_button = QPushButton("导入资料")
         self.import_button.setObjectName("importButton")
+        self.import_button.setProperty("class", "primaryButton")
+        self.import_button.setIcon(make_icon("upload", color="#F5F0E8", size=18))
         self.import_button.clicked.connect(self.choose_import)
-        library_layout.addWidget(self.import_button)
+        sidebar_layout.addWidget(self.import_button)
+        self.model_settings_button = QPushButton("模型设置")
+        self.model_settings_button.setObjectName("modelSettingsButton")
+        self.model_settings_button.setProperty("class", "toolButton")
+        self.model_settings_button.setIcon(make_icon("settings", color="#D8DDE3", size=18))
+        self.model_settings_button.clicked.connect(self.settings_action.trigger)
+        sidebar_layout.addWidget(self.model_settings_button)
         self.delete_button = QPushButton("删除所选资料")
         self.delete_button.setObjectName("deleteMaterialButton")
+        self.delete_button.setProperty("class", "toolButton")
+        self.delete_button.setIcon(make_icon("trash", color="#D8DDE3", size=17))
         self.delete_button.clicked.connect(self.delete_selected)
-        library_layout.addWidget(self.delete_button)
-        splitter.addWidget(library_panel)
+        sidebar_layout.addWidget(self.delete_button)
+        root_layout.addWidget(self.sidebar)
 
-        source_panel = QWidget()
+        self.content_area = QWidget()
+        self.content_area.setObjectName("contentArea")
+        content_layout = QVBoxLayout(self.content_area)
+        content_layout.setContentsMargins(24, 18, 24, 18)
+        content_layout.setSpacing(16)
+
+        header = QFrame()
+        header.setObjectName("mainToolbar")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 12)
+        header_layout.setSpacing(12)
+        title_block = QVBoxLayout()
+        self.file_title_label = ElidedLabel("挑选一份资料开始阅读")
+        self.file_title_label.setObjectName("fileTitleLabel")
+        self.file_title_label.setMinimumWidth(100)
+        self.file_title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.file_stats_label = QLabel("PDF · DOCX · TXT · MD")
+        self.file_stats_label.setObjectName("fileStatsLabel")
+        self.file_stats_label.setWordWrap(True)
+        title_block.addWidget(self.file_title_label)
+        title_block.addWidget(self.file_stats_label)
+        header_layout.addLayout(title_block, 1)
+
+        self.analyze_button = QPushButton("生成分析")
+        self.analyze_button.setObjectName("analyzeButton")
+        self.analyze_button.setProperty("class", "primaryButton")
+        self.analyze_button.setIcon(make_icon("sparkle", color="#FFFEFB", size=18))
+        self.analyze_button.clicked.connect(self.start_analysis)
+        header_layout.addWidget(self.analyze_button)
+        self.cancel_button = QPushButton("停止")
+        self.cancel_button.setObjectName("cancelButton")
+        self.cancel_button.setProperty("class", "toolButton")
+        self.cancel_button.setIcon(make_icon("stop", size=16))
+        self.cancel_button.clicked.connect(self.cancel_job)
+        self.cancel_button.hide()
+        header_layout.addWidget(self.cancel_button)
+        self.export_md_button = QPushButton("Markdown")
+        self.export_md_button.setObjectName("exportMarkdownButton")
+        self.export_md_button.setProperty("class", "toolButton")
+        self.export_md_button.setIcon(make_icon("download", size=16))
+        self.export_md_button.setToolTip("导出 Markdown 分析报告")
+        self.export_md_button.clicked.connect(lambda: self._choose_export("md"))
+        header_layout.addWidget(self.export_md_button)
+        self.export_json_button = QPushButton("JSON")
+        self.export_json_button.setObjectName("exportJsonButton")
+        self.export_json_button.setProperty("class", "toolButton")
+        self.export_json_button.setIcon(make_icon("download", size=16))
+        self.export_json_button.setToolTip("导出 JSON 分析报告")
+        self.export_json_button.clicked.connect(lambda: self._choose_export("json"))
+        header_layout.addWidget(self.export_json_button)
+        content_layout.addWidget(header)
+
+        self.body_stack = QStackedWidget()
+        self.body_stack.setObjectName("bodyStack")
+        self.empty_page = QWidget()
+        self.empty_page.setObjectName("emptyLibraryPage")
+        empty_layout = QVBoxLayout(self.empty_page)
+        empty_layout.setContentsMargins(24, 18, 24, 24)
+        empty_layout.addStretch(1)
+        self.empty_art = EmptyLibraryArt()
+        self.empty_art.setObjectName("emptyLibraryArt")
+        empty_layout.addWidget(self.empty_art, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.empty_title = QLabel("把资料，读成自己的思路")
+        self.empty_title.setObjectName("emptyLibraryTitle")
+        self.empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addWidget(self.empty_title)
+        self.empty_copy = QLabel("从一份课程笔记开始。原文留在本机；你决定何时把文字发送给在线模型。")
+        self.empty_copy.setObjectName("emptyLibraryCopy")
+        self.empty_copy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_copy.setWordWrap(True)
+        empty_layout.addWidget(self.empty_copy)
+        self.empty_import_button = QPushButton("导入第一份资料")
+        self.empty_import_button.setObjectName("emptyImportButton")
+        self.empty_import_button.setProperty("class", "primaryButton")
+        self.empty_import_button.setIcon(make_icon("upload", color="#FFFEFB", size=18))
+        self.empty_import_button.clicked.connect(self.choose_import)
+        empty_layout.addWidget(self.empty_import_button, 0, Qt.AlignmentFlag.AlignHCenter)
+        empty_layout.addStretch(1)
+        self.body_stack.addWidget(self.empty_page)
+
+        self.workspace_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.workspace_splitter.setObjectName("mainSplitter")
+        self.workspace_splitter.setHandleWidth(16)
+        source_panel = QFrame()
         source_panel.setObjectName("contentPanel")
         source_layout = QVBoxLayout(source_panel)
-        source_layout.setContentsMargins(14, 14, 14, 12)
-        source_title = QLabel("来源与原文")
-        source_title.setStyleSheet("font-size:18px;font-weight:700;color:#17343b")
-        source_layout.addWidget(source_title)
+        source_layout.setContentsMargins(18, 16, 18, 16)
+        source_layout.setSpacing(11)
+        source_header = QHBoxLayout()
+        source_title = QLabel("原文与来源")
+        source_title.setObjectName("sectionTitle")
+        self.source_hint = QLabel("点击来源跳转")
+        self.source_hint.setWordWrap(False)
+        self.source_hint.setMinimumWidth(80)
+        self.source_hint.setMaximumWidth(100)
+        source_hint_font = self.source_hint.font()
+        source_hint_font.setPointSize(9)
+        self.source_hint.setFont(source_hint_font)
+        self.source_hint.setObjectName("mutedLabel")
+        source_header.addWidget(source_title)
+        source_header.addStretch(1)
+        source_header.addWidget(self.source_hint)
+        source_layout.addLayout(source_header)
         self.material_stats = QLabel("尚未选择资料")
         self.material_stats.setObjectName("materialStats")
         self.material_stats.setWordWrap(True)
         self.material_stats.setProperty("class", "mutedLabel")
-        source_layout.addWidget(self.material_stats)
+        self.material_stats.hide()
         self.warning_label = QLabel("")
         self.warning_label.setObjectName("materialWarnings")
         self.warning_label.setWordWrap(True)
-        self.warning_label.setStyleSheet("color:#8a5b00;background:#fff7df;padding:7px;border-radius:6px")
+        self.warning_label.setProperty("class", "warningBanner")
+        self.warning_label.setMaximumHeight(72)
         source_layout.addWidget(self.warning_label)
         self.source_list = QListWidget()
         self.source_list.setObjectName("sourceList")
+        self.source_list.setMaximumHeight(48)
+        self.source_list.setMinimumHeight(40)
+        self.source_list.setSpacing(2)
         self.source_list.currentItemChanged.connect(self._on_source_changed)
-        source_layout.addWidget(self.source_list, 1)
+        source_layout.addWidget(self.source_list, 0)
         self.source_preview = QPlainTextEdit()
         self.source_preview.setObjectName("sourcePreview")
         self.source_preview.setReadOnly(True)
+        self.source_preview.document().setDefaultFont(self.font())
         self.source_preview.setPlaceholderText("选择一个来源片段以查看原文。")
-        source_layout.addWidget(self.source_preview, 2)
-        splitter.addWidget(source_panel)
+        source_layout.addWidget(self.source_preview, 1)
+        self.workspace_splitter.addWidget(source_panel)
 
-        report_panel = QWidget()
+        report_panel = QFrame()
         report_panel.setObjectName("contentPanel")
         report_layout = QVBoxLayout(report_panel)
-        report_layout.setContentsMargins(14, 14, 14, 12)
+        report_layout.setContentsMargins(18, 16, 18, 16)
+        report_layout.setSpacing(11)
         report_title = QLabel("分析报告")
-        report_title.setStyleSheet("font-size:18px;font-weight:700;color:#17343b")
+        report_title.setObjectName("sectionTitle")
         report_layout.addWidget(report_title)
         self.report_tabs = QTabWidget()
         self.report_tabs.setObjectName("reportTabs")
+        self.report_meta_label = QLabel("")
+        self.report_meta_label.setObjectName("reportMetaLabel")
+        self.report_meta_label.setWordWrap(True)
+        self.report_meta_label.setProperty("class", "mutedLabel")
+        report_layout.addWidget(self.report_meta_label)
         self.report_views: dict[str, QTextBrowser] = {}
         for key, label in (("summary", "摘要"), ("outline", "大纲"), ("knowledge", "知识点"), ("suggestions", "建议")):
             view = QTextBrowser()
             view.setObjectName(f"report{key.title()}View")
             view.setOpenLinks(False)
             view.setOpenExternalLinks(False)
+            view.document().setDefaultFont(self.font())
+            view.document().setDefaultStyleSheet("body { font-size:14px; line-height:1.65; } p { margin:0 0 12px 0; } li { margin:0 0 9px 0; } h2 { margin:0 0 10px 0; } a { color:#AA4E2A; text-decoration:none; font-weight:600; } .sourceRefs { color:#657080; font-size:12px; }")
             view.anchorClicked.connect(self._on_report_source_clicked)
             self.report_views[key] = view
             self.report_tabs.addTab(view, label)
         report_layout.addWidget(self.report_tabs, 1)
+        report_panel.setMinimumWidth(320)
+        source_panel.setMinimumWidth(280)
+        self.workspace_splitter.addWidget(report_panel)
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.setSizes([430, 610])
+        self.body_stack.addWidget(self.workspace_splitter)
+        content_layout.addWidget(self.body_stack, 1)
         self.status_label = QLabel("导入资料后，可在本机查看来源并按需分析。")
         self.status_label.setObjectName("statusLabel")
         self.status_label.setWordWrap(True)
         self.status_label.setProperty("class", "mutedLabel")
-        report_layout.addWidget(self.status_label)
         self.progress_bar = QProgressBar()
         self.progress_bar.setObjectName("jobProgress")
         self.progress_bar.setRange(0, 100)
         self.progress_bar.hide()
-        report_layout.addWidget(self.progress_bar)
-        splitter.addWidget(report_panel)
-        splitter.setSizes([250, 420, 500])
+        status_row = QHBoxLayout()
+        status_row.addWidget(self.status_label, 1)
+        status_row.addWidget(self.progress_bar, 0)
+        content_layout.addLayout(status_row)
+        root_layout.addWidget(self.content_area, 1)
 
         self._show_empty_state()
+
+    def _make_material_card(self, material) -> tuple[Any, QFrame]:
+        from PySide6.QtCore import QSize
+        from PySide6.QtWidgets import QListWidgetItem
+
+        item = QListWidgetItem(material.filename)
+        item.setData(Qt.ItemDataRole.UserRole, material.id)
+        item.setToolTip(material.filename)
+        item.setSizeHint(QSize(0, 64))
+        card = QFrame()
+        card.setObjectName("libraryCard")
+        card.setProperty("active", False)
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(9, 7, 9, 7)
+        card_layout.setSpacing(9)
+        icon_label = QLabel()
+        icon_label.setObjectName("libraryFileIcon")
+        icon_name = "pdf" if material.kind == "pdf" else "text" if material.kind in {"txt", "md"} else "file"
+        icon_label.setPixmap(make_icon(icon_name, size=22).pixmap(22, 22))
+        icon_label.setToolTip(material.kind.upper())
+        card_layout.addWidget(icon_label, 0, Qt.AlignmentFlag.AlignTop)
+        words = QVBoxLayout()
+        words.setSpacing(3)
+        filename = ElidedLabel(material.filename)
+        filename.setObjectName("libraryFilename")
+        filename.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        stats = QLabel(f"{material.character_count:,} 字  ·  {material.source_count} 段")
+        stats.setObjectName("libraryFileStats")
+        stats.setProperty("class", "mutedLabel")
+        words.addWidget(filename)
+        words.addWidget(stats)
+        card_layout.addLayout(words, 1)
+        return item, card
+
+    @staticmethod
+    def _new_source_item(label: str, source_id: str):
+        from PySide6.QtWidgets import QListWidgetItem
+
+        item = QListWidgetItem(label)
+        item.setData(Qt.ItemDataRole.UserRole, source_id)
+        return item
 
     def _connect_jobs(self) -> None:
         self.jobs.progress.connect(self._on_progress)
@@ -243,6 +447,7 @@ class MainWindow(QMainWindow):
         self.jobs.idle.connect(self._on_jobs_idle)
 
     def refresh_library(self, select_id: str | None = None) -> None:
+        initial_status = self.status_label.text() == "导入资料后，可在本机查看来源并按需分析。"
         try:
             items = self.service.list_materials()
         except sqlite3.Error:
@@ -253,17 +458,23 @@ class MainWindow(QMainWindow):
         self.library_list.blockSignals(True)
         self.library_list.clear()
         selected_row = -1
+        self.library_count.setText(f"{len(items)} 份")
         for row, material in enumerate(items):
-            item = self._new_list_item(f"{material.filename}  ·  {material.kind.upper()}", material.id)
+            item, card = self._make_material_card(material)
             self.library_list.addItem(item)
+            self.library_list.setItemWidget(item, card)
             if material.id == target:
                 selected_row = row
         if selected_row < 0 and items:
             selected_row = 0
         self.library_list.setCurrentRow(selected_row)
         self.library_list.blockSignals(False)
+        self._sync_card_selection()
         if selected_row >= 0:
+            self.body_stack.setCurrentWidget(self.workspace_splitter)
             self._load_material(items[selected_row].id)
+            if initial_status:
+                self._set_reading_status()
         else:
             self._material_id = None
             self._sources = []
@@ -272,29 +483,46 @@ class MainWindow(QMainWindow):
             self._show_empty_state()
         self._update_controls()
 
-    @staticmethod
-    def _new_list_item(label: str, item_id: str):
-        from PySide6.QtWidgets import QListWidgetItem
-
-        item = QListWidgetItem(label)
-        item.setData(Qt.ItemDataRole.UserRole, item_id)
-        return item
-
     def _show_empty_state(self) -> None:
         self.material_stats.setText("资料库为空。点击“导入资料…”或将单个 PDF、DOCX、TXT、MD 文件拖到窗口。")
         self.warning_label.clear()
         self.warning_label.hide()
         self.source_list.clear()
         self.source_preview.clear()
+        self.file_title_label.setFullText("挑选一份资料开始阅读")
+        self.file_stats_label.setText("PDF · DOCX · TXT · MD")
+        self.body_stack.setCurrentWidget(self.empty_page)
         for view in self.report_views.values():
-            view.setHtml("<div style='color:#60777b;padding:14px'><h3>开始整理学习资料</h3><p>导入支持格式的文字资料后，可以核对来源原文并生成摘要、提纲、知识点和学习建议。</p><p>在线分析只在你显式点击分析后发生。</p></div>")
+            view.setHtml("<p>导入支持格式的文字资料后，可以核对来源原文并生成摘要、提纲、知识点和学习建议。</p>")
+        self._update_controls()
 
     def _on_material_changed(self, current, previous) -> None:
         if current is None:
             return
+        self._sync_card_selection()
         material_id = current.data(Qt.ItemDataRole.UserRole)
         if material_id:
             self._load_material(str(material_id))
+            if not self._is_busy():
+                self._set_reading_status()
+
+    def _sync_card_selection(self) -> None:
+        current = self.library_list.currentItem()
+        for row in range(self.library_list.count()):
+            item = self.library_list.item(row)
+            card = self.library_list.itemWidget(item)
+            if card is not None:
+                active = item is current
+                if card.property("active") != active:
+                    card.setProperty("active", active)
+                    card.style().unpolish(card)
+                    card.style().polish(card)
+
+    def _set_reading_status(self) -> None:
+        if self._report:
+            self.status_label.setText("已载入这份资料的本地分析报告，可按来源核对原文。")
+        else:
+            self.status_label.setText("已载入本地资料，可选择来源查看原文或按需生成分析。")
 
     def _load_material(self, material_id: str) -> None:
         try:
@@ -310,16 +538,20 @@ class MainWindow(QMainWindow):
         paragraph_count = len({source.paragraph for source in self._sources if source.page is None and source.paragraph is not None})
         location_stats = f"{page_count} 页" if page_count else f"{paragraph_count} 个段落起点"
         self.material_stats.setText(f"{material.filename} · {material.kind.upper()}\n{material.character_count:,} 字 · {material.source_count} 个来源片段 · {location_stats}")
+        self.file_title_label.setFullText(material.filename)
+        self.file_stats_label.setText(f"{material.character_count:,} 字  ·  {material.source_count} 个来源片段  ·  {location_stats}")
         self.warning_label.setText("\n".join(material.warnings))
         self.warning_label.setVisible(bool(material.warnings))
         self.source_list.blockSignals(True)
         self.source_list.clear()
         for source in self._sources:
-            self.source_list.addItem(self._new_list_item(f"{source.id}  ·  {source.locator}", source.id))
+            self.source_list.addItem(self._new_source_item(f"{source.id}  ·  {source.locator}", source.id))
+        self.source_list.setMaximumHeight(min(150, max(48, len(self._sources) * 44 + 8)))
         self.source_list.setCurrentRow(0 if self._sources else -1)
         self.source_list.blockSignals(False)
         self._on_source_changed(self.source_list.currentItem(), None)
         self._render_report(self._report)
+        self.body_stack.setCurrentWidget(self.workspace_splitter)
         self._update_controls()
 
     def _on_source_changed(self, current, previous) -> None:
@@ -346,30 +578,40 @@ class MainWindow(QMainWindow):
 
     def _render_report(self, report: dict[str, Any] | None) -> None:
         if not report:
-            empty = "<p style='color:#60777b'>这份资料还没有报告。配置在线模型后点击“生成分析报告”。</p>"
-            for view in self.report_views.values():
-                view.setHtml(empty)
+            self.report_meta_label.clear()
+            prompts = {
+                "summary": "<h2>为这份资料生成整理报告</h2><p>填写你选择的 OpenAI 兼容服务配置，再点右上角“生成分析报告”。只有点击后才会发送文字。</p><p>分析会处理本文件中全部可提取文字，长资料可能分批多次请求并产生费用。</p>",
+                "outline": "<h2>结构提纲</h2><p>分析完成后，这里会按章节展示资料脉络。每个条目都可以跳回来源原文核对。</p>",
+                "knowledge": "<h2>知识点</h2><p>分析完成后，这里会列出概念说明及其原文出处。AI 生成内容需要自行核对。</p>",
+                "suggestions": "<h2>学习建议</h2><p>分析完成后会根据资料内容生成复习建议。建议仅供参考，请结合课程目标判断。</p>",
+            }
+            for key, view in self.report_views.items():
+                view.setHtml(prompts[key])
             return
         title = html.escape(str(report.get("title") or "分析报告"))
-        summary = html.escape(str(report.get("summary", ""))).replace("\n", "<br>")
+        summary_raw = str(report.get("summary", ""))
+        summary = "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in summary_raw.splitlines() if paragraph.strip())
         meta = report.get("metadata", {})
         analyzed = html.escape(str(meta.get("analyzed_source_count", "?")))
         total = html.escape(str(meta.get("total_source_count", "?")))
-        meta_html = f"<p style='color:#60777b'>模型：{html.escape(str(meta.get('model', '未知')))} · 来源覆盖：{analyzed}/{total}</p>"
+        model_name = html.escape(str(meta.get("model", "未知")))
+        self.report_meta_label.setText(f"来源覆盖 {analyzed}/{total} 段  ·  {model_name}")
         warnings = report.get("warnings", [])
         warning_html = "".join(f"<li>{html.escape(str(warning))}</li>" for warning in warnings)
-        self.report_views["summary"].setHtml(f"<h2>{title}</h2><p>{summary}</p>{meta_html}<h3>分析提示</h3><ul>{warning_html or '<li>AI 生成内容需对照原文核验。</li>'}</ul><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+        warning_section = f"<aside><h3>需要留意</h3><ul>{warning_html}</ul></aside>" if warnings else ""
+        self.report_views["summary"].setHtml(f"<h2>{title}</h2>{summary}{warning_section}<p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
 
         def outline_html(nodes: list[dict[str, Any]], depth: int = 0) -> str:
             chunks = []
             for node in nodes:
-                chunks.append("<li>" + html.escape(str(node.get("title", ""))) + "：" + html.escape(str(node.get("summary", ""))) + " " + self._source_link(node.get("source_ids", [])) + outline_html(node.get("children", []), depth + 1) + "</li>")
-            return "<ul>" + "".join(chunks) + "</ul>" if chunks else ""
-        self.report_views["outline"].setHtml(outline_html(report.get("outline", [])) or "<p>暂无提纲。</p>")
-        points = "".join(f"<li><b>{html.escape(str(point.get('name', '')))}</b>：{html.escape(str(point.get('explanation', '')))} {self._source_link(point.get('source_ids', []))}</li>" for point in report.get("knowledge_points", []))
-        self.report_views["knowledge"].setHtml(f"<ul>{points}</ul><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
-        suggestions = "".join(f"<li>{html.escape(str(item))}</li>" for item in report.get("learning_suggestions", []))
-        self.report_views["suggestions"].setHtml(f"<ul>{suggestions}</ul><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+                chunks.append("<li><h3>" + html.escape(str(node.get("title", ""))) + "</h3><p>" + html.escape(str(node.get("summary", ""))) + "</p><p class='sourceRefs'>来源：" + self._source_link(node.get("source_ids", [])) + "</p>" + outline_html(node.get("children", []), depth + 1) + "</li>")
+            return "<ol>" + "".join(chunks) + "</ol>" if chunks else ""
+        outline = outline_html(report.get("outline", []))
+        self.report_views["outline"].setHtml(outline or "<p>暂无提纲。</p>")
+        points = "".join(f"<li><h3>{html.escape(str(point.get('name', '')))}</h3><p>{html.escape(str(point.get('explanation', '')))}</p><p class='sourceRefs'>来源：{self._source_link(point.get('source_ids', []))}</p></li>" for point in report.get("knowledge_points", []))
+        self.report_views["knowledge"].setHtml(f"<ol>{points}</ol><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+        suggestions = "".join(f"<li><p>{html.escape(str(item))}</p></li>" for item in report.get("learning_suggestions", []))
+        self.report_views["suggestions"].setHtml(f"<ol>{suggestions}</ol><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
 
     def choose_import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "选择学习资料", "", "学习资料 (*.pdf *.docx *.txt *.md)")
@@ -453,7 +695,7 @@ class MainWindow(QMainWindow):
         busy = self._is_busy()
         has_material = self._material_id is not None
         accepting = not self._closing
-        for widget in (self.library_list, self.import_button, self.delete_button, self.settings_action):
+        for widget in (self.library_list, self.import_button, self.empty_import_button, self.model_settings_button, self.delete_button, self.settings_action):
             widget.setEnabled(not busy and accepting)
         self.delete_button.setEnabled(has_material and not busy and accepting)
         self.analyze_button.setEnabled(has_material and not busy and accepting)

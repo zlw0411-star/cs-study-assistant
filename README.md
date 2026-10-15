@@ -53,7 +53,7 @@ $env:CSA_ANALYSIS_API_KEY = "your-api-key"
 
 通用资料功能的覆盖范围、模拟服务验证方式和边界见[验证记录](docs/material-analysis-validation.md)。
 
-桌面版启动方式、离屏 Qt 与 Windows 启动验证结果及其人工验收限制见[桌面版指南与验证记录](docs/desktop.md)。
+桌面版提供暖纸色与墨蓝侧栏的原生界面；启动方式、离屏 Qt 与 Windows 启动验证结果及其人工验收限制见[桌面版指南与验证记录](docs/desktop.md)。
 
 ## 项目结构
 

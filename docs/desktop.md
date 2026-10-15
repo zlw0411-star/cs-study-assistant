@@ -19,6 +19,8 @@
 
 桌面端支持导入可选择文字的 PDF、DOCX、TXT 和 MD 文件，浏览提取文字与来源，生成摘要、提纲、知识点等报告，并导出报告。PDF 不做 OCR。桌面版和网页端会看到相同的本机资料及已保存报告。
 
+界面采用暖纸色背景、深墨蓝资料栏、陶土色主操作和纸白内容卡片。图标与空库插画由 Qt 绘制，不依赖位图素材；紧凑布局保留资料、来源原文和报告的并排阅读区域。
+
 分析只在用户点击分析后发送资料。分析可能分批发起多次在线模型请求并产生费用；发送前请核对模型服务及资料内容是否适合在线处理。API 地址、模型名和密钥可由当前窗口的配置填写，也可使用 `CSA_ANALYSIS_BASE_URL`、`CSA_ANALYSIS_MODEL`、`CSA_ANALYSIS_API_KEY` 环境变量。密钥仅保留在当前会话或环境中，不写入本地数据库。
 
 报告来源用于帮助回查原文，不保证模型生成结论正确；请对照来源自行核验。模型服务需能连接，且其可用性、输出质量和费用由服务提供方决定。
@@ -27,13 +29,13 @@
 
 ## 验证记录
 
-在 Windows 项目虚拟环境安装 PySide6-Essentials 6.12.0 后，桌面相关 18 项通过：DesktopJobs 7 项、Qt UI 8 项、入口 3 项；其中离屏 UI 与入口测试使用以下命令运行，11 项通过：
+在 Windows 项目虚拟环境安装 PySide6-Essentials 6.12.0 后，桌面相关 20 项通过：DesktopJobs 7 项、Qt UI 8 项、入口 3 项、布局 2 项；其中离屏 UI、入口和布局测试使用以下命令运行，13 项通过：
 
 ```powershell
 $env:QT_QPA_PLATFORM = 'offscreen'
-.\.venv\Scripts\python.exe -m pytest tests/test_desktop_entry.py tests/test_desktop_ui.py
+.\.venv\Scripts\python.exe -m pytest tests/test_desktop_entry.py tests/test_desktop_ui.py tests/test_desktop_layout.py
 ```
 
-全量测试共 105 项通过，另有 1 条既有 jieba `pkg_resources` 弃用警告。入口帮助、缺少可选依赖提示和入口委派也单独覆盖。PowerShell 启动/安装脚本通过语法解析，项目打包元数据可正常读取。
+当前全量测试共 107 项通过，另有 1 条既有 jieba `pkg_resources` 弃用警告。新增紧凑布局回归在 900×600 窗口检查主操作与停止按钮的可达性、长文件名和多来源片段、空库与无报告引导、资料切换后的报告清空、当前资料卡的选中反馈，以及来源跳转和取消后的待机状态。入口帮助、缺少可选依赖提示和入口委派也单独覆盖。PowerShell 启动/安装脚本通过语法解析，项目打包元数据可正常读取。
 
-Windows `pythonw.exe` 实际启动了桌面窗口，Qt Windows 平台报告 152 个系统字体；预览由程序对窗口 QWidget 调用 `grab()` 生成，展示内容来自合成资料和模拟报告。Windows computer-use 截图两次因窗口捕获超时而失败，因此没有完成原生鼠标点击的人工验收。Qt 自动交互测试通过，但不代表各种分辨率或多屏环境下的人工体验。模型集成测试使用模拟 HTTP 响应；真实模型语义、提供方可用性和费用未验证。
+Windows `pythonw.exe` 实际启动了桌面窗口，Qt Windows 平台报告 152 个系统字体。主窗口与模型设置窗口均通过程序调用 QWidget `grab()` 渲染并作了视觉检查；主窗口预览使用合成资料和模拟报告。Windows computer-use 截图两次因窗口捕获超时而失败，因此没有完成原生鼠标点击验收。Qt 自动交互测试通过，但不代表各种分辨率或多屏环境下的人工操作体验。模型集成测试使用模拟 HTTP 响应；真实模型语义、提供方可用性和费用未验证。
