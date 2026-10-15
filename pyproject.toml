@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cs-study-assistant"
 version = "0.1.0"
-description = "Local-first Chinese 408 study assistant"
+description = "Local-first study material organizer and source-grounded analysis assistant"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "streamlit>=1.40,<2",
@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 models = ["sentence-transformers>=3.3,<6"]
 dev = ["pytest>=8,<9"]
+desktop = ["PySide6-Essentials>=6.8,<7"]
 
 [tool.setuptools.packages.find]
 include = ["study_assistant*"]

@@ -28,7 +28,7 @@ def test_streamlit_exam_app_opens_with_empty_temporary_database(tmp_path, monkey
     streamlit_testing = pytest.importorskip("streamlit.testing.v1")
     monkeypatch.setenv("CSA_DATA_DIR", str(tmp_path / "app-data"))
     app = streamlit_testing.AppTest.from_file(
-        str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=15
+        str(Path(__file__).resolve().parents[1] / "legacy_exam_app.py"), default_timeout=15
     ).run()
     assert not app.exception
     assert any("当前题库" in item.value for item in app.caption)
@@ -49,7 +49,7 @@ def test_seeded_question_page_renders_learning_and_topic_reflection_controls(tmp
 
     monkeypatch.setenv("CSA_DATA_DIR", str(data_dir))
     app = streamlit_testing.AppTest.from_file(
-        str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=15
+        str(Path(__file__).resolve().parents[1] / "legacy_exam_app.py"), default_timeout=15
     ).run()
     assert not app.exception
     assert any("本题复习状态（自评）" in item.label for item in app.selectbox)
@@ -120,7 +120,7 @@ def test_unclassified_subject_sidebar_stats_exclude_other_subjects(tmp_path, mon
 
     monkeypatch.setenv("CSA_DATA_DIR", str(data_dir))
     app = streamlit_testing.AppTest.from_file(
-        str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=15
+        str(Path(__file__).resolve().parents[1] / "legacy_exam_app.py"), default_timeout=15
     ).run()
     assert not app.exception
 

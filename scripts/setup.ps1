@@ -1,4 +1,4 @@
-﻿param([string]$PythonExecutable)
+﻿param([string]$PythonExecutable, [switch]$Desktop)
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
@@ -28,7 +28,12 @@ $VenvVersion = & $VenvPython -c "import sys; print(f'{sys.version_info.major}.{s
 if ($VenvVersion -ne '3.12') { throw "现有 .venv 使用 Python $VenvVersion；本项目要求 Python 3.12。请手动移走该 .venv 后重新运行 setup.ps1。" }
 & $VenvPython -X utf8 -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) { throw '升级 pip 失败，请检查网络后重试。' }
-& $VenvPython -X utf8 -m pip install -r requirements.txt
+if ($Desktop) {
+    & $VenvPython -X utf8 -m pip install -r requirements-desktop.txt
+} else {
+    & $VenvPython -X utf8 -m pip install -r requirements.txt
+}
 if ($LASTEXITCODE -ne 0) { throw '依赖安装失败。请检查网络后重新运行 scripts/setup.ps1。' }
 & $VenvPython -X utf8 -m pip freeze | Set-Content -Encoding utf8 'installed-versions.txt'
-Write-Host '基础环境已就绪。题目解析与学习记录使用本地SQLite；不需要下载生成模型。'
+if ($Desktop) { Write-Host 'Desktop dependencies installed. Double click 启动桌面版.cmd in the project folder.' }
+Write-Host '基础环境已就绪。资料整理使用本地SQLite；在线模型仅在资料分析页面点击分析时调用。运行 scripts/start.ps1 启动通用资料分析助手，运行 scripts/start_408.ps1 启动旧版408真题学习台。'
