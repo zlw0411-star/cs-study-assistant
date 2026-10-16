@@ -14,4 +14,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "桌面版依赖或 Qt 运行组件无法加载。请运行 scripts\setup.ps1 -Desktop 后重试。诊断：$Cause"
 }
 
-Start-Process -FilePath $Pythonw -ArgumentList @('-X', 'utf8', 'desktop_app.py') -WorkingDirectory $ProjectRoot -WindowStyle Hidden
+Start-Process -FilePath $Pythonw -ArgumentList @('-X', 'utf8', 'desktop_app.py') -WorkingDirectory $ProjectRoot -WindowStyle Normal

@@ -29,13 +29,13 @@
 
 ## 验证记录
 
-在 Windows 项目虚拟环境安装 PySide6-Essentials 6.12.0 后，桌面相关 20 项通过：DesktopJobs 7 项、Qt UI 8 项、入口 3 项、布局 2 项；其中离屏 UI、入口和布局测试使用以下命令运行，13 项通过：
+在 Windows 项目虚拟环境安装 PySide6-Essentials 6.12.0 后，桌面相关 21 项通过：DesktopJobs 7 项、Qt UI 8 项、入口 3 项、布局 2 项、CMD 启动器端到端 1 项；其中离屏 UI、入口和布局测试使用以下命令运行，13 项通过：
 
 ```powershell
 $env:QT_QPA_PLATFORM = 'offscreen'
 .\.venv\Scripts\python.exe -m pytest tests/test_desktop_entry.py tests/test_desktop_ui.py tests/test_desktop_layout.py
 ```
 
-当前全量测试共 107 项通过，另有 1 条既有 jieba `pkg_resources` 弃用警告。新增紧凑布局回归在 900×600 窗口检查主操作与停止按钮的可达性、长文件名和多来源片段、空库与无报告引导、资料切换后的报告清空、当前资料卡的选中反馈，以及来源跳转和取消后的待机状态。入口帮助、缺少可选依赖提示和入口委派也单独覆盖。PowerShell 启动/安装脚本通过语法解析，项目打包元数据可正常读取。
+当前全量测试共 108 项通过，另有 1 条既有 jieba `pkg_resources` 弃用警告。CMD 启动器回归从真实 `cmd.exe` 执行复制到含中文和空格目录的启动器，由 stub PowerShell 脚本验证入口已运行，以及成功码和失败码都正确返回；失败路径通过 `<NUL` 跳过暂停，不会挂起测试。新增紧凑布局回归在 900×600 窗口检查主操作与停止按钮的可达性、长文件名和多来源片段、空库与无报告引导、资料切换后的报告清空、当前资料卡的选中反馈，以及来源跳转和取消后的待机状态。入口帮助、缺少可选依赖提示和入口委派也单独覆盖。PowerShell 启动/安装脚本通过语法解析，项目打包元数据可正常读取。
 
 Windows `pythonw.exe` 实际启动了桌面窗口，Qt Windows 平台报告 152 个系统字体。主窗口与模型设置窗口均通过程序调用 QWidget `grab()` 渲染并作了视觉检查；主窗口预览使用合成资料和模拟报告。Windows computer-use 截图两次因窗口捕获超时而失败，因此没有完成原生鼠标点击验收。Qt 自动交互测试通过，但不代表各种分辨率或多屏环境下的人工操作体验。模型集成测试使用模拟 HTTP 响应；真实模型语义、提供方可用性和费用未验证。

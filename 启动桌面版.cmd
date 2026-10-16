@@ -1,10 +1,17 @@
 @echo off
 setlocal
-chcp 65001 >nul
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start_desktop.ps1"
-if errorlevel 1 (
+set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+if not exist "%PS%" (
+  echo Windows PowerShell was not found. 1>&2
+  set "RC=9009"
+  goto finish
+)
+"%PS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start_desktop.ps1"
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" (
   echo.
-  echo 桌面版启动失败。请按上方提示安装环境，或查看项目 docs\desktop.md。
+  echo Desktop startup failed. See the error above.
   pause
 )
-endlocal
+:finish
+endlocal & exit /b %RC%
