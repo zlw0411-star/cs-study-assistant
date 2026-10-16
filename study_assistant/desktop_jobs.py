@@ -120,7 +120,7 @@ class _JobWorker(QObject):
                     client.close()
                 except Exception:  # noqa: BLE001 - preserve safe result despite cleanup errors
                     # Cleanup failures must not replace a safe job outcome.
-                    if self.outcome is None or self.outcome[0] == "succeeded":
+                    if self.outcome is None:
                         self.outcome = ("failed", _generic_error(self.kind))
             if self.cancel_event.is_set():
                 self.outcome = ("cancelled", None)
@@ -258,6 +258,11 @@ _SAFE_IMPORT_ERRORS = {
     "DOCX 文件无效：缺少正文内容。",
     "DOCX 文件损坏或无法读取，请检查文件后重试。",
     "DOCX 中没有可读取的文字。",
+    "DOCX 文件包含重复的 XML 内容。",
+    "DOCX XML 包含不安全的 DTD 声明。",
+    "DOCX XML 层级过深，无法安全读取。",
+    "文本文件包含二进制或损坏内容，请另存为 UTF-8 后重试。",
+    "文本文件编码无法读取或内容损坏，请另存为 UTF-8 后重试。",
     "文件类型不受支持，请上传可选择文字的 PDF、DOCX、TXT 或 MD 文件。",
     "文件为空或没有可读取的文字。",
     "上传的文件为空。",

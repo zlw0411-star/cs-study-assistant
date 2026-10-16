@@ -42,17 +42,22 @@ def _safe_filename(filename: str) -> str:
 
 
 def _clean(text: str) -> str:
-    text = text.replace("\x00", "")
-    return "".join(ch if ch in "\n\r\t" or ord(ch) >= 32 else "�" for ch in text).strip()
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\f", "\n\n").replace("\x00", "")
+    cleaned = "".join(ch if ch in "\n\t" or ord(ch) >= 32 else "�" for ch in text).strip("\n")
+    return cleaned if cleaned.strip() else ""
 
 
 def _decode_text(raw: bytes) -> str:
-    for encoding in ("utf-8-sig", "utf-8", "gb18030"):
+    encodings = ("utf-16",) if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else ("utf-8-sig", "gb18030")
+    for encoding in encodings:
         try:
-            return _clean(raw.decode(encoding))
+            text = raw.decode(encoding)
         except UnicodeDecodeError:
             continue
-    return _clean(raw.decode("utf-8", errors="replace"))
+        if any(ord(ch) < 32 and ch not in "\r\n\t\f" for ch in text):
+            raise _MaterialInputError("文本文件包含二进制或损坏内容，请另存为 UTF-8 后重试。")
+        return _clean(text)
+    raise _MaterialInputError("文本文件编码无法读取或内容损坏，请另存为 UTF-8 后重试。")
 
 
 def _split_entries(entries: list[tuple[str, int | None, int | None]], kind: str) -> list[MaterialSource]:
@@ -78,14 +83,14 @@ def _split_entries(entries: list[tuple[str, int | None, int | None]], kind: str)
         # Slice lazily so a very long paragraph does not create a large pieces list.
         for offset in range(0, len(text), SOURCE_CHARS):
             piece = text[offset:offset + SOURCE_CHARS]
-            if buf and (len(buf) + 1 + len(piece) > SOURCE_CHARS or (page is not None and start_page != page)):
+            if buf and (len(buf) + 2 + len(piece) > SOURCE_CHARS or (page is not None and start_page != page)):
                 flush()
             if not buf:
                 start_page, start_para = page, paragraph
-            stored_chars += len(piece) + (1 if buf else 0)
+            stored_chars += len(piece) + (2 if buf else 0)
             if stored_chars > MAX_CHARACTERS:
                 raise _MaterialInputError("文件文字超过 600,000 个字符，请拆分文件后再导入。")
-            buf = f"{buf}\n{piece}" if buf else piece
+            buf = f"{buf}\n\n{piece}" if buf else piece
     flush()
     return result
 
@@ -108,20 +113,28 @@ def _extract_pdf(raw: bytes) -> tuple[list[MaterialSource], list[str]]:
                 raise _MaterialInputError("暂不支持带密码的 PDF 文件。")
         entries: list[tuple[str, int | None, int | None]] = []
         warnings: list[str] = []
+        empty_pages = 0
         total_pages = len(reader.pages)
         for page_no, page in enumerate(reader.pages, 1):
             try:
                 text = _clean(page.extract_text() or "")
             except Exception:
-                text = ""
+                empty_pages += 1
+                warnings.append(f"第 {page_no} 页文字提取失败，内容未导入；请检查原 PDF。")
+                continue
             if not text:
-                warnings.append(f"第 {page_no} 页没有可读取的文字，可能是扫描页或空白页。")
+                empty_pages += 1
+                warnings.append(f"第 {page_no} 页没有可读取的文字，可能是扫描页或空白页；当前不支持 OCR。")
                 continue
             for para_no, paragraph in enumerate((p.strip() for p in re.split(r"\n\s*\n", text)), 1):
                 if paragraph:
                     entries.append((paragraph, page_no, para_no))
-        if total_pages and len(warnings) == total_pages:
+        if total_pages and empty_pages == total_pages:
             raise _MaterialInputError("PDF 中没有可读取的文字；当前不支持对扫描版 PDF 进行 OCR。")
+        if entries:
+            # PDF text has no reliable semantic heading/table structure. Avoid
+            # guessing from font size or pretending that formulas are complete.
+            warnings.append("PDF 按可读取文字提取；标题层级、阅读顺序及公式、图表可能丢失或错乱，请对照原文核对（不支持 OCR）。")
         return _split_entries(entries, "pdf"), warnings
     except _MaterialInputError:
         raise
@@ -138,45 +151,144 @@ def _extract_docx(raw: bytes) -> tuple[list[MaterialSource], list[str]]:
             if sum(item.file_size for item in infos) > MAX_UNCOMPRESSED_BYTES:
                 raise ValueError("DOCX 解压后超过 64 MB 限制。")
             for info in infos:
-                path = Path(info.filename)
-                if path.is_absolute() or ".." in path.parts:
+                normalized = info.filename.replace("\\", "/")
+                path = Path(normalized)
+                if path.is_absolute() or ".." in normalized.split("/") or re.match(r"^[A-Za-z]:", normalized):
                     raise ValueError("DOCX 压缩包包含不安全的路径。")
             if "word/document.xml" not in archive.namelist():
                 raise ValueError("DOCX 文件无效：缺少正文内容。")
-            root = ET.fromstring(archive.read("word/document.xml"))
+
+            def read_xml(name):
+                if archive.namelist().count(name) != 1:
+                    raise ValueError("DOCX 文件包含重复的 XML 内容。")
+                data = archive.read(name)
+                # Also cover UTF-16/32 XML declarations without expanding entities.
+                if b"<!DOCTYPE" in data.replace(b"\x00", b"").upper():
+                    raise ValueError("DOCX XML 包含不安全的 DTD 声明。")
+                return ET.fromstring(data)
+
+            root = read_xml("word/document.xml")
+            if root.tag != f"{{{_DOCX_NS}}}document" or root.find(f"{{{_DOCX_NS}}}body") is None:
+                raise ValueError("DOCX 文件无效：缺少正文内容。")
+            styles_root = read_xml("word/styles.xml") if "word/styles.xml" in archive.namelist() else None
     except ValueError:
-        raise
-    except _MaterialInputError:
         raise
     except Exception as exc:
         raise ValueError("DOCX 文件损坏或无法读取，请检查文件后重试。") from exc
 
-    # Iterate paragraphs in XML order, including paragraphs nested inside tables.
+    ns = {"w": _DOCX_NS}
+    w = "{" + _DOCX_NS + "}"
+    styles = {} if styles_root is None else {
+        node.get(w + "styleId"): node for node in styles_root.findall("w:style", ns)
+    }
+
+    def value(node, path):
+        found = node.find(path, ns)
+        return found.get(w + "val") if found is not None else None
+
+    def heading_level(paragraph):
+        outline = value(paragraph, "w:pPr/w:outlineLvl")
+        style_id = value(paragraph, "w:pPr/w:pStyle")
+        seen = set()
+        while outline is None and style_id and style_id not in seen:
+            seen.add(style_id)
+            style = styles.get(style_id)
+            if style is not None:
+                outline = value(style, "w:pPr/w:outlineLvl")
+            if outline is not None:
+                break
+            name = value(style, "w:name") if style is not None else None
+            match = (re.fullmatch(r"(?:heading|标题)\s*([1-9])", style_id, re.I)
+                     or re.fullmatch(r"(?:heading|标题)\s*([1-9])", name or "", re.I))
+            if match:
+                return int(match.group(1))
+            style_id = value(style, "w:basedOn") if style is not None else None
+        return int(outline) + 1 if outline in {"0", "1", "2", "3", "4", "5", "6", "7", "8"} else None
+
+    def children(element):
+        # OOXML supplies alternate representations of the same content; never
+        # extract both Choice and Fallback (notably duplicated text boxes).
+        mc = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+        if element.tag == mc + "AlternateContent":
+            branch = element.find(mc + "Choice")
+            if branch is None:
+                branch = element.find(mc + "Fallback")
+            return () if branch is None else (branch,)
+        return element
+
     entries: list[tuple[str, int | None, int | None]] = []
     has_deletions = False
+    has_graphics = False
+    has_math = False
     para_no = 0
-    for element in root.iter(f"{{{_DOCX_NS}}}p"):
-        para_no += 1
-        chunks = []
-        deleted = {id(node) for revision in element.iter(f"{{{_DOCX_NS}}}del") for node in revision.iter()}
-        for child in element.iter():
-            if child.tag == f"{{{_DOCX_NS}}}del":
-                has_deletions = True
-            if child.tag == f"{{{_DOCX_NS}}}t" and child.text and id(child) not in deleted:
-                chunks.append(child.text)
-            elif child.tag == f"{{{_DOCX_NS}}}delText":
-                has_deletions = True
-            elif child.tag == f"{{{_DOCX_NS}}}tab":
-                chunks.append("\t")
-            elif child.tag == f"{{{_DOCX_NS}}}br":
-                chunks.append("\n")
-        text = _clean("".join(chunks))
-        if text:
-            entries.append((text, None, para_no))
+
+    def walk(element):
+        nonlocal has_deletions, has_graphics, has_math, para_no
+        if element.tag in (w + "del", w + "delText", w + "moveFrom"):
+            has_deletions = True
+            return
+        if element.tag in (w + "drawing", w + "pict", w + "object"):
+            has_graphics = True
+        if element.tag.startswith("{http://schemas.openxmlformats.org/officeDocument/2006/math}"):
+            has_math = True
+        if element.tag == w + "p":
+            para_no += 1
+            number = para_no
+            level = heading_level(element)
+            own_chunks = []
+
+            def emit():
+                nonlocal level
+                text = _clean("".join(own_chunks))
+                if text:
+                    entries.append((("#" * level + " " if level else "") + text, None, number))
+                    level = None
+                own_chunks.clear()
+
+            # Nested text-box paragraphs must not also become outer run text.
+            def inline(node):
+                if node.tag == w + "p":
+                    emit()
+                    walk(node)
+                elif node.tag in (w + "del", w + "delText", w + "moveFrom"):
+                    walk(node)
+                else:
+                    walk_inline(node)
+
+            def walk_inline(node):
+                nonlocal has_graphics, has_math
+                if node.tag in (w + "drawing", w + "pict", w + "object"):
+                    has_graphics = True
+                if node.tag.startswith("{http://schemas.openxmlformats.org/officeDocument/2006/math}"):
+                    has_math = True
+                if node.tag == w + "t" and node.text:
+                    own_chunks.append(node.text)
+                elif node.tag == w + "tab":
+                    own_chunks.append("\t")
+                elif node.tag in (w + "br", w + "cr"):
+                    own_chunks.append("\n")
+                for child in children(node):
+                    inline(child)
+
+            for child in children(element):
+                inline(child)
+            emit()
+            return
+        for child in children(element):
+            walk(child)
+
+    try:
+        walk(root.find("w:body", ns))
+    except RecursionError as exc:
+        raise ValueError("DOCX XML 层级过深，无法安全读取。") from exc
     sources = _split_entries(entries, "docx")
     if not sources:
         raise ValueError("DOCX 中没有可读取的文字。")
     warnings = ["已忽略 DOCX 中标记为删除的修订内容。"] if has_deletions else []
+    if has_graphics:
+        warnings.append("DOCX 包含图片、图表或嵌入对象；仅提取可读取的正文文字，图像内容可能缺失，请核对原文（不支持 OCR）。")
+    if has_math:
+        warnings.append("DOCX 包含公式；当前不还原公式结构，相关内容可能缺失，请对照原文核对。")
     return sources, warnings
 
 

@@ -256,7 +256,8 @@ def test_extraction_warnings_are_merged_after_analysis_and_deduplicated():
     material = type("M", (), {"filename": "scan.pdf", "warnings": ["部分页面无可提取文字", "已忽略文档修订"]})()
     result = MaterialAnalyzer(make_client(handler)).analyze(material, [MaterialSource("S1", "text", "page 1")])
     assert result["warnings"] == ["部分页面无可提取文字", "已忽略文档修订"]
-    assert result["metadata"]["coverage_basis"] == "已导入且可提取的来源段"
+    assert "处理范围" in result["metadata"]["coverage_basis"]
+    assert "不代表" in result["metadata"]["coverage_basis"]
 
 
 def test_hierarchical_synthesis_bounds_input_and_preserves_all_sources():

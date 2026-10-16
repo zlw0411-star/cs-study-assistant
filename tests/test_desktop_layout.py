@@ -191,6 +191,11 @@ def test_empty_guidance_long_name_many_sources_and_report_switch(tmp_path, qt_ap
     # A multi-source document remains navigable in the compact split layout.
     window.source_list.setCurrentRow(3)
     qt_app.processEvents()
+    assert window.size() == QSize(900, 600), window.size()
+    assert window.report_tabs.mapToGlobal(QPoint(0, 0)).x() < window.source_preview.mapToGlobal(QPoint(0, 0)).x()
+    window.report_tabs.setCurrentIndex(1)
+    qt_app.processEvents()
+    _assert_inside_window(window, [window.outline_tree, window.report_tabs, window.source_preview])
     assert len(window.source_preview.toPlainText()) <= 3000
     assert window.source_list.currentItem().data(Qt.ItemDataRole.UserRole) == "S4"
     window.report_views["outline"].anchorClicked.emit(QUrl(f"source:{first_source.id}"))
@@ -201,7 +206,9 @@ def test_empty_guidance_long_name_many_sources_and_report_switch(tmp_path, qt_ap
     _select_material(window, no_report.id)
     qt_app.processEvents()
     summary = window.report_views["summary"].toPlainText()
-    assert "为这份资料" in summary and "OpenAI" in summary
+    assert window._report == window._local_report
+    assert "本地规则" in summary and "未调用模型" in window.report_meta_label.text()
+    assert window.export_md_button.isEnabled() and window.export_json_button.isEnabled()
     assert "已保存报告" not in summary
     for view in window.report_views.values():
         assert view.toPlainText().strip()
@@ -216,6 +223,7 @@ def test_empty_guidance_long_name_many_sources_and_report_switch(tmp_path, qt_ap
         window.source_list,
         window.source_preview,
         window.report_tabs,
+        window.mode_combo,
         window.status_label,
     ])
     window.close()

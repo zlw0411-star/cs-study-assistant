@@ -134,7 +134,9 @@ def test_pdf_retains_short_and_mixed_empty_pages(monkeypatch, service):
     result = service.import_document("mixed.pdf", pdf_bytes([1, 2, 3]))
     assert result.material.source_count == 2
     assert result.material.character_count == 14
-    assert result.material.warnings == ["第 2 页没有可读取的文字，可能是扫描页或空白页。"]
+    assert result.material.warnings[0] == "第 2 页没有可读取的文字，可能是扫描页或空白页；当前不支持 OCR。"
+    assert len(result.material.warnings) == 2
+    assert "公式、图表" in result.material.warnings[1]
     assert [(s.page, s.paragraph) for s in service.get_sources(result.material.id)] == [(1, 1), (3, 1)]
 
 
@@ -215,8 +217,7 @@ def test_text_and_source_limits_are_checked_and_failed_report_leaves_state(monke
 
 
 def test_joined_source_newlines_count_toward_character_limit(service):
-    # The body has 300,300 letters; source assembly adds another newline between
-    # each paragraph, taking the persisted source text just over 600,000 chars.
+    # Paragraph separators count toward the persisted character limit, too.
     raw = ("\n\n".join(["x"] * 300_300)).encode()
     with pytest.raises(ValueError, match="文字超过 600,000 个字符"):
         service.import_document("joined.txt", raw)

@@ -15,6 +15,7 @@ from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -34,6 +35,8 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTabWidget,
     QTextBrowser,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -130,6 +133,10 @@ class MainWindow(QMainWindow):
         self._sources: list[Any] = []
         self._source_by_id: dict[str, Any] = {}
         self._report: dict[str, Any] | None = None
+        self._online_report: dict[str, Any] | None = None
+        self._local_report: dict[str, Any] | None = None
+        self._online_warning = ""
+        self._material_modes: dict[str, str] = {}
         self._base_url = os.getenv("CSA_ANALYSIS_BASE_URL", "")
         self._model = os.getenv("CSA_ANALYSIS_MODEL", "")
         self._api_key = os.getenv("CSA_ANALYSIS_API_KEY", "")
@@ -242,10 +249,11 @@ class MainWindow(QMainWindow):
         title_block.addWidget(self.file_stats_label)
         header_layout.addLayout(title_block, 1)
 
-        self.analyze_button = QPushButton("生成分析")
+        self.analyze_button = QPushButton("在线智能整理")
         self.analyze_button.setObjectName("analyzeButton")
         self.analyze_button.setProperty("class", "primaryButton")
         self.analyze_button.setIcon(make_icon("sparkle", color="#FFFEFB", size=18))
+        self.analyze_button.setToolTip("发送本资料的全部提取文字到配置的模型服务；长资料可能分批多次请求并计费。")
         self.analyze_button.clicked.connect(self.start_analysis)
         header_layout.addWidget(self.analyze_button)
         self.cancel_button = QPushButton("停止")
@@ -329,10 +337,18 @@ class MainWindow(QMainWindow):
         self.material_stats.hide()
         self.warning_label = QLabel("")
         self.warning_label.setObjectName("materialWarnings")
+        self.warning_label.setTextFormat(Qt.TextFormat.PlainText)
         self.warning_label.setWordWrap(True)
         self.warning_label.setProperty("class", "warningBanner")
         self.warning_label.setMaximumHeight(72)
         source_layout.addWidget(self.warning_label)
+        self.warning_button = QPushButton("查看全部提取警告")
+        self.warning_button.clicked.connect(self._show_extraction_warnings)
+        self.warning_button.hide()
+        source_layout.addWidget(self.warning_button)
+        limitation = QLabel("仅核对提取文字：扫描件需 OCR；复杂公式、表格及版式可能丢失，请对照原文件。")
+        limitation.setWordWrap(True)
+        source_layout.addWidget(limitation)
         self.source_list = QListWidget()
         self.source_list.setObjectName("sourceList")
         self.source_list.setMaximumHeight(48)
@@ -353,17 +369,39 @@ class MainWindow(QMainWindow):
         report_layout = QVBoxLayout(report_panel)
         report_layout.setContentsMargins(18, 16, 18, 16)
         report_layout.setSpacing(11)
-        report_title = QLabel("分析报告")
+        report_title = QLabel("整理结果")
         report_title.setObjectName("sectionTitle")
-        report_layout.addWidget(report_title)
+        report_heading = QHBoxLayout()
+        report_heading.addWidget(report_title)
+        self.mode_combo = QComboBox()
+        self.mode_combo.setObjectName("reportModeCombo")
+        self.mode_combo.addItem("本地整理", "local")
+        self.mode_combo.addItem("智能整理", "online")
+        self.mode_combo.setToolTip("本地整理只识别标题与原文分段；智能整理需显式点击按钮调用模型。")
+        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        report_heading.addWidget(self.mode_combo)
+        report_layout.addLayout(report_heading)
         self.report_tabs = QTabWidget()
         self.report_tabs.setObjectName("reportTabs")
         self.report_meta_label = QLabel("")
         self.report_meta_label.setObjectName("reportMetaLabel")
         self.report_meta_label.setWordWrap(True)
         self.report_meta_label.setProperty("class", "mutedLabel")
+        self.report_meta_label.setMaximumHeight(64)
         report_layout.addWidget(self.report_meta_label)
+        self.report_details_button = QPushButton("查看整理详情")
+        self.report_details_button.setObjectName("reportDetailsButton")
+        self.report_details_button.clicked.connect(self._show_report_details)
+        self.report_details_button.hide()
+        report_layout.addWidget(self.report_details_button)
         self.report_views: dict[str, QTextBrowser] = {}
+        self.outline_tree = QTreeWidget()
+        self.outline_tree.setObjectName("outlineTree")
+        self.outline_tree.setHeaderHidden(True)
+        self.outline_tree.setMinimumHeight(40)
+        self.outline_tree.setMaximumHeight(120)
+        self.outline_tree.currentItemChanged.connect(self._on_outline_selected)
+        self.outline_tree.itemClicked.connect(lambda item, column: self._on_outline_selected(item, None))
         for key, label in (("summary", "摘要"), ("outline", "大纲"), ("knowledge", "知识点"), ("suggestions", "建议")):
             view = QTextBrowser()
             view.setObjectName(f"report{key.title()}View")
@@ -373,15 +411,28 @@ class MainWindow(QMainWindow):
             view.document().setDefaultStyleSheet("body { font-size:14px; line-height:1.65; } p { margin:0 0 12px 0; } li { margin:0 0 9px 0; } h2 { margin:0 0 10px 0; } a { color:#AA4E2A; text-decoration:none; font-weight:600; } .sourceRefs { color:#657080; font-size:12px; }")
             view.anchorClicked.connect(self._on_report_source_clicked)
             self.report_views[key] = view
-            self.report_tabs.addTab(view, label)
+            if key == "outline":
+                outline_page = QWidget()
+                outline_layout = QVBoxLayout(outline_page)
+                outline_layout.setContentsMargins(0, 0, 0, 0)
+                outline_layout.addWidget(self.outline_tree)
+                outline_layout.addWidget(view, 1)
+                self.report_tabs.addTab(outline_page, label)
+            else:
+                self.report_tabs.addTab(view, label)
         report_layout.addWidget(self.report_tabs, 1)
         report_panel.setMinimumWidth(320)
         source_panel.setMinimumWidth(280)
-        self.workspace_splitter.addWidget(report_panel)
+        self.workspace_splitter.insertWidget(0, report_panel)
         self.workspace_splitter.setChildrenCollapsible(False)
-        self.workspace_splitter.setSizes([430, 610])
+        self.workspace_splitter.setSizes([610, 430])
         self.body_stack.addWidget(self.workspace_splitter)
         content_layout.addWidget(self.body_stack, 1)
+        self.online_notice_label = QLabel("在线智能整理发送本资料全部提取文字，可能多次计费；本地整理不联网。")
+        self.online_notice_label.setObjectName("onlineAnalysisNotice")
+        self.online_notice_label.setWordWrap(True)
+        self.online_notice_label.setProperty("class", "mutedLabel")
+        content_layout.addWidget(self.online_notice_label)
         self.status_label = QLabel("导入资料后，可在本机查看来源并按需分析。")
         self.status_label.setObjectName("statusLabel")
         self.status_label.setWordWrap(True)
@@ -472,14 +523,16 @@ class MainWindow(QMainWindow):
         self._sync_card_selection()
         if selected_row >= 0:
             self.body_stack.setCurrentWidget(self.workspace_splitter)
-            self._load_material(items[selected_row].id)
-            if initial_status:
+            loaded = self._load_material(items[selected_row].id)
+            if initial_status and loaded:
                 self._set_reading_status()
         else:
             self._material_id = None
             self._sources = []
             self._source_by_id = {}
             self._report = None
+            self._online_report = None
+            self._local_report = None
             self._show_empty_state()
         self._update_controls()
 
@@ -487,6 +540,10 @@ class MainWindow(QMainWindow):
         self.material_stats.setText("资料库为空。点击“导入资料…”或将单个 PDF、DOCX、TXT、MD 文件拖到窗口。")
         self.warning_label.clear()
         self.warning_label.hide()
+        self.warning_button.hide()
+        self.outline_tree.clear()
+        self.report_meta_label.clear()
+        self.report_details_button.hide()
         self.source_list.clear()
         self.source_preview.clear()
         self.file_title_label.setFullText("挑选一份资料开始阅读")
@@ -502,8 +559,8 @@ class MainWindow(QMainWindow):
         self._sync_card_selection()
         material_id = current.data(Qt.ItemDataRole.UserRole)
         if material_id:
-            self._load_material(str(material_id))
-            if not self._is_busy():
+            loaded = self._load_material(str(material_id))
+            if loaded and not self._is_busy():
                 self._set_reading_status()
 
     def _sync_card_selection(self) -> None:
@@ -519,29 +576,90 @@ class MainWindow(QMainWindow):
                     card.style().polish(card)
 
     def _set_reading_status(self) -> None:
-        if self._report:
-            self.status_label.setText("已载入这份资料的本地分析报告，可按来源核对原文。")
+        if self.mode_combo.currentData() == "local":
+            self.status_label.setText(self._online_warning or "已载入本地目录，可按来源核对原文；未调用模型。")
+        elif self._report:
+            self.status_label.setText("已载入智能整理报告，可按来源核对原文。")
         else:
-            self.status_label.setText("已载入本地资料，可选择来源查看原文或按需生成分析。")
+            self.status_label.setText("尚未生成智能报告；切换模式不会联网，点击“在线智能整理”才会发送资料。")
 
-    def _load_material(self, material_id: str) -> None:
+    @staticmethod
+    def _readable_online_report(report: Any) -> bool:
+        """Tolerate sparse legacy reports, but reject shapes unsafe to render."""
+        if not isinstance(report, dict) or not isinstance(report.get("metadata", {}), dict):
+            return False
+        if any(not isinstance(report.get(key, []), list) for key in
+               ("outline", "knowledge_points", "warnings", "learning_suggestions")):
+            return False
+        def valid_refs(value):
+            return isinstance(value, list) and all(isinstance(sid, str) for sid in value)
+
+        if not valid_refs(report.get("metadata", {}).get("unreferenced_source_ids", [])):
+            return False
+        stack = [(node, 1) for node in report.get("outline", [])]
+        visited = 0
+        while stack:
+            node, depth = stack.pop()
+            visited += 1
+            if (visited > 600 or depth > 32 or not isinstance(node, dict)
+                    or not isinstance(node.get("children", []), list)
+                    or not valid_refs(node.get("source_ids", []))):
+                return False
+            stack.extend((child, depth + 1) for child in node.get("children", []))
+        return all(isinstance(point, dict) and isinstance(point.get("chapter", ""), str)
+                   and valid_refs(point.get("source_ids", []))
+                   for point in report.get("knowledge_points", []))
+
+    def _load_material(self, material_id: str) -> bool:
         try:
             material = self.service.get_material(material_id)
-            self._material_id = material_id
-            self._sources = self.service.get_sources(material_id)
-            self._source_by_id = {source.id: source for source in self._sources}
-            self._report = self.service.get_analysis(material_id)
-        except (ValueError, OSError, sqlite3.Error):
+            sources = self.service.get_sources(material_id)
+            from .local_organization import build_local_report
+
+            local_report = build_local_report(material, sources)
+        except (TypeError, ValueError, OSError, sqlite3.Error):
+            self._material_id = None
+            self._sources = []
+            self._source_by_id = {}
+            self._report = None
+            self._online_report = None
+            self._local_report = None
+            self._online_warning = ""
+            self._show_empty_state()
+            self.file_title_label.setFullText("资料读取失败")
             self.status_label.setText("无法读取所选资料，请检查本机资料库后重试。")
-            return
+            self._update_controls()
+            return False
+        # A corrupt online report must not disable readable local sources.
+        self._online_warning = ""
+        try:
+            report = self.service.get_analysis(material_id)
+            if report is not None and not self._readable_online_report(report):
+                raise ValueError("Stored online report has an invalid shape")
+        except (TypeError, ValueError, OSError, sqlite3.Error, RecursionError):
+            report = None
+            self._online_warning = "智能报告读取失败，本地目录仍可使用；原有智能报告未被修改。"
+            local_report["warnings"].append(self._online_warning)
+            self._material_modes[material_id] = "local"
+        self._material_id = material_id
+        self._sources = sources
+        self._source_by_id = {source.id: source for source in sources}
+        self._online_report = report
+        self._local_report = local_report
+        mode = self._material_modes.get(material_id, "online" if report else "local")
+        self.mode_combo.blockSignals(True)
+        self.mode_combo.setCurrentIndex(self.mode_combo.findData(mode))
+        self.mode_combo.blockSignals(False)
+        self._report = local_report if mode == "local" else report
         page_count = len({source.page for source in self._sources if source.page is not None})
         paragraph_count = len({source.paragraph for source in self._sources if source.page is None and source.paragraph is not None})
         location_stats = f"{page_count} 页" if page_count else f"{paragraph_count} 个段落起点"
         self.material_stats.setText(f"{material.filename} · {material.kind.upper()}\n{material.character_count:,} 字 · {material.source_count} 个来源片段 · {location_stats}")
         self.file_title_label.setFullText(material.filename)
-        self.file_stats_label.setText(f"{material.character_count:,} 字  ·  {material.source_count} 个来源片段  ·  {location_stats}")
+        self.file_stats_label.setText(f"{material.kind.upper()} · {material.character_count:,} 字符 · {material.source_count} 个来源片段 · {location_stats}")
         self.warning_label.setText("\n".join(material.warnings))
         self.warning_label.setVisible(bool(material.warnings))
+        self.warning_button.setVisible(bool(material.warnings))
         self.source_list.blockSignals(True)
         self.source_list.clear()
         for source in self._sources:
@@ -551,8 +669,75 @@ class MainWindow(QMainWindow):
         self.source_list.blockSignals(False)
         self._on_source_changed(self.source_list.currentItem(), None)
         self._render_report(self._report)
+        if mode == "local":
+            self.report_tabs.setCurrentIndex(1)
         self.body_stack.setCurrentWidget(self.workspace_splitter)
+        if self._online_warning:
+            self.status_label.setText(self._online_warning)
         self._update_controls()
+        return True
+
+    def _on_mode_changed(self, index: int) -> None:
+        if not self._material_id:
+            return
+        mode = self.mode_combo.currentData()
+        self._material_modes[self._material_id] = mode
+        self._report = self._local_report if mode == "local" else self._online_report
+        self._render_report(self._report)
+        if mode == "local":
+            self.report_tabs.setCurrentIndex(1)
+        self._set_reading_status()
+        self._update_controls()
+
+    def _show_extraction_warnings(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("全部提取警告")
+        dialog.resize(560, 400)
+        layout = QVBoxLayout(dialog)
+        text = QPlainTextEdit()
+        text.setReadOnly(True)
+        text.setPlainText(self.warning_label.text())
+        layout.addWidget(text)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
+
+    def _show_report_details(self) -> None:
+        if not self._report:
+            return
+        meta = self._report.get("metadata", {})
+        lines = [
+            f"模型：{meta.get('model', '未知')}",
+            f"生成时间：{meta.get('generated_at', '未知')}",
+            f"已处理来源：{meta.get('analyzed_source_count', '?')}/{meta.get('total_source_count', '?')}",
+            f"已引用来源：{meta.get('referenced_source_count', '旧报告未记录')}",
+            "处理和引用数量均不代表语义完整性。",
+            "未引用来源：",
+            *meta.get("unreferenced_source_ids", []),
+        ]
+        if meta.get("mode") == "local":
+            lines = ["本地规则（未调用模型）", f"识别标题：{meta.get('heading_count', 0)}", f"原文分段：{self._local_segment_count(self._report)}", "仅提供结构与来源索引，不进行内容理解。", "未引用来源：", *meta.get("unreferenced_source_ids", [])]
+        dialog = QDialog(self)
+        dialog.setWindowTitle("整理详情与未引用来源")
+        dialog.resize(560, 400)
+        layout = QVBoxLayout(dialog)
+        text = QPlainTextEdit()
+        text.setReadOnly(True)
+        text.setPlainText("\n".join(lines))
+        layout.addWidget(text)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
+
+    def _on_outline_selected(self, current, previous) -> None:
+        if current is not None:
+            refs = current.data(0, Qt.ItemDataRole.UserRole) or []
+            for source_id in refs:
+                if source_id in self._source_by_id:
+                    self._on_report_source_clicked(QUrl(f"source:{source_id}"))
+                    break
 
     def _on_source_changed(self, current, previous) -> None:
         if current is None:
@@ -566,7 +751,9 @@ class MainWindow(QMainWindow):
         links = []
         for source_id in source_ids:
             safe_id = html.escape(str(source_id), quote=True)
-            links.append(f'<a href="source:{safe_id}">[{safe_id}]</a>')
+            source = self._source_by_id.get(str(source_id))
+            locator = f" · {html.escape(source.locator)}" if source else ""
+            links.append(f'<a href="source:{safe_id}">[{safe_id}{locator}]</a>')
         return " ".join(links)
 
     def _on_report_source_clicked(self, url: QUrl) -> None:
@@ -576,11 +763,28 @@ class MainWindow(QMainWindow):
                 self.source_list.setCurrentRow(row)
                 return
 
+    @staticmethod
+    def _local_segment_count(report: dict[str, Any]) -> int:
+        def count(nodes):
+            return sum((node.get("kind") == "source_segment") + count(node.get("children", [])) for node in nodes)
+        return count(report.get("outline", []))
+
+    @staticmethod
+    def _outline_origin(node: dict[str, Any], local: bool) -> str:
+        if local and node.get("kind") == "source_segment":
+            return "原文分段"
+        return "原文标题" if node.get("origin") == "original" else "自动归纳"
+
     def _render_report(self, report: dict[str, Any] | None) -> None:
+        local_view = bool(report and report.get("metadata", {}).get("mode") == "local")
+        self.report_tabs.setTabText(0, "说明" if local_view else "摘要")
+        self.report_tabs.setTabText(1, "目录" if local_view else "大纲")
+        self.outline_tree.clear()
+        self.report_details_button.setVisible(bool(report))
         if not report:
             self.report_meta_label.clear()
             prompts = {
-                "summary": "<h2>为这份资料生成整理报告</h2><p>填写你选择的 OpenAI 兼容服务配置，再点右上角“生成分析报告”。只有点击后才会发送文字。</p><p>分析会处理本文件中全部可提取文字，长资料可能分批多次请求并产生费用。</p>",
+                "summary": "<h2>为这份资料生成整理报告</h2><p>填写你选择的 OpenAI 兼容服务配置，再点右上角“智能整理”。只有点击后才会发送文字。</p><p>分析会处理本文件中全部可提取文字，长资料可能分批多次请求并产生费用。</p>",
                 "outline": "<h2>结构提纲</h2><p>分析完成后，这里会按章节展示资料脉络。每个条目都可以跳回来源原文核对。</p>",
                 "knowledge": "<h2>知识点</h2><p>分析完成后，这里会列出概念说明及其原文出处。AI 生成内容需要自行核对。</p>",
                 "suggestions": "<h2>学习建议</h2><p>分析完成后会根据资料内容生成复习建议。建议仅供参考，请结合课程目标判断。</p>",
@@ -592,26 +796,75 @@ class MainWindow(QMainWindow):
         summary_raw = str(report.get("summary", ""))
         summary = "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in summary_raw.splitlines() if paragraph.strip())
         meta = report.get("metadata", {})
-        analyzed = html.escape(str(meta.get("analyzed_source_count", "?")))
-        total = html.escape(str(meta.get("total_source_count", "?")))
-        model_name = html.escape(str(meta.get("model", "未知")))
-        self.report_meta_label.setText(f"来源覆盖 {analyzed}/{total} 段  ·  {model_name}")
+        local = meta.get("mode") == "local"
+        analyzed = str(meta.get("analyzed_source_count", "?"))
+        total = str(meta.get("total_source_count", "?"))
+        model_name = str(meta.get("model", "未知"))
+        if len(model_name) > 60:
+            model_name = model_name[:57] + "…"
+        info = f"已处理来源 {analyzed}/{total} 段（非语义覆盖率） · {model_name}"
+        if "referenced_source_count" in meta:
+            info += f" · 已引用来源 {meta['referenced_source_count']}"
+        missing = meta.get("unreferenced_source_ids", [])
+        if missing:
+            preview = ", ".join(missing) if len(missing) <= 5 else f"{len(missing)} 段（查看整理详情）"
+            info += " · 未引用来源：" + preview
+        if local:
+            info = f"本地规则（未调用模型） · 识别标题 {meta.get('heading_count', 0)} · 原文分段 {self._local_segment_count(report)}"
+        self.report_meta_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.report_meta_label.setText(info)
         warnings = report.get("warnings", [])
         warning_html = "".join(f"<li>{html.escape(str(warning))}</li>" for warning in warnings)
         warning_section = f"<aside><h3>需要留意</h3><ul>{warning_html}</ul></aside>" if warnings else ""
-        self.report_views["summary"].setHtml(f"<h2>{title}</h2>{summary}{warning_section}<p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+        notice = "本地规则仅提供结构与来源索引，不进行内容理解。" if local else "AI 生成内容，请自行核对来源和结论。"
+        self.report_views["summary"].setHtml(f"<h2>{title}</h2>{summary}{warning_section}<p><b>{notice}</b></p>")
+
+        tree_items = 0
+
+        def populate_tree(nodes, parent=None):
+            nonlocal tree_items
+            for node in nodes:
+                tree_items += 1
+                label = self._outline_origin(node, local)
+                item = QTreeWidgetItem([f"{node.get('title', '')}【{label}】"])
+                item.setData(0, Qt.ItemDataRole.UserRole, node.get("source_ids", []))
+                item.setToolTip(0, str(node.get("summary", "")))
+                if parent is None:
+                    self.outline_tree.addTopLevelItem(item)
+                else:
+                    parent.addChild(item)
+                populate_tree(node.get("children", []), item)
+        populate_tree(report.get("outline", []))
+        self.outline_tree.setMaximumHeight(min(120, max(48, tree_items * 22 + 8)))
+        self.outline_tree.expandAll()
 
         def outline_html(nodes: list[dict[str, Any]], depth: int = 0) -> str:
             chunks = []
             for node in nodes:
-                chunks.append("<li><h3>" + html.escape(str(node.get("title", ""))) + "</h3><p>" + html.escape(str(node.get("summary", ""))) + "</p><p class='sourceRefs'>来源：" + self._source_link(node.get("source_ids", [])) + "</p>" + outline_html(node.get("children", []), depth + 1) + "</li>")
+                chunks.append("<li><h3>" + html.escape(str(node.get("title", ""))) + ("【" + self._outline_origin(node, local) + "】") + "</h3><p>" + html.escape(str(node.get("summary", ""))) + "</p><p class='sourceRefs'>来源：" + self._source_link(node.get("source_ids", [])) + "</p>" + outline_html(node.get("children", []), depth + 1) + "</li>")
             return "<ol>" + "".join(chunks) + "</ol>" if chunks else ""
         outline = outline_html(report.get("outline", []))
         self.report_views["outline"].setHtml(outline or "<p>暂无提纲。</p>")
-        points = "".join(f"<li><h3>{html.escape(str(point.get('name', '')))}</h3><p>{html.escape(str(point.get('explanation', '')))}</p><p class='sourceRefs'>来源：{self._source_link(point.get('source_ids', []))}</p></li>" for point in report.get("knowledge_points", []))
-        self.report_views["knowledge"].setHtml(f"<ol>{points}</ol><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+        chapters: dict[str, list[dict[str, Any]]] = {}
+        for point in report.get("knowledge_points", []):
+            chapters.setdefault(point.get("chapter") or "未标注章节", []).append(point)
+        sections = []
+        for chapter, points in chapters.items():
+            sections.append(f"<h2>{html.escape(chapter)}</h2>")
+            for point in points:
+                sections.append(f"<h3>{html.escape(str(point.get('name', '')))}</h3>")
+                for key, label in (("explanation", "说明"), ("definition", "定义"), ("key_points", "要点"), ("formulas", "公式"), ("conditions", "适用条件")):
+                    value = point.get(key)
+                    if value:
+                        values = value if isinstance(value, list) else [value]
+                        sections.append(f"<p><b>{label}</b>：" + "<br>".join(html.escape(str(v)) for v in values) + "</p>")
+                sections.append("<p>来源：" + self._source_link(point.get("source_ids", [])) + "</p>")
+        self.report_views["knowledge"].setHtml("<p><b>AI 归纳，非原文；请核对来源。</b></p>" + "".join(sections))
         suggestions = "".join(f"<li><p>{html.escape(str(item))}</p></li>" for item in report.get("learning_suggestions", []))
         self.report_views["suggestions"].setHtml(f"<ol>{suggestions}</ol><p><b>AI 生成内容，请自行核对来源和结论。</b></p>")
+        if local:
+            self.report_views["knowledge"].setHtml("<h2>知识点需要智能整理</h2><p>本地目录仅识别标题和原文分段。请配置模型并点击“智能整理”以获取知识点。</p>")
+            self.report_views["suggestions"].setHtml("<h2>学习建议需要智能整理</h2><p>本地规则不提供内容理解或学习建议。点击“智能整理”才会调用模型。</p>")
 
     def choose_import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "选择学习资料", "", "学习资料 (*.pdf *.docx *.txt *.md)")
@@ -673,7 +926,13 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "需要配置模型", "请先打开“模型设置”，填写服务地址、模型 ID 和 API 密钥。")
             return
         self.status_label.setText("分析时将把所选资料的全部可提取文字分批发送到配置的服务，可能产生多次请求和费用。")
-        if self.jobs.start_analysis(self._material_id, config):
+        try:
+            started = self.jobs.start_analysis(self._material_id, config)
+        except Exception:
+            self.status_label.setText("智能整理启动失败；已有报告与本地目录仍保留。请检查模型配置。")
+            self._update_controls()
+            return
+        if started:
             self._update_controls()
         else:
             self.status_label.setText("当前有任务正在运行，请稍候。")
@@ -697,6 +956,7 @@ class MainWindow(QMainWindow):
         accepting = not self._closing
         for widget in (self.library_list, self.import_button, self.empty_import_button, self.model_settings_button, self.delete_button, self.settings_action):
             widget.setEnabled(not busy and accepting)
+        self.mode_combo.setEnabled(has_material and not busy and accepting)
         self.delete_button.setEnabled(has_material and not busy and accepting)
         self.analyze_button.setEnabled(has_material and not busy and accepting)
         self.cancel_button.setVisible(busy)
@@ -730,16 +990,21 @@ class MainWindow(QMainWindow):
             if result.warnings:
                 self.warning_label.setText("\n".join(result.warnings))
                 self.warning_label.setVisible(True)
+                self.warning_button.show()
         elif kind == "analysis":
             material_id = payload.get("material_id")
             report = payload.get("report")
-            if not isinstance(report, dict) or material_id != self._material_id:
+            if self._cancel_requested or not isinstance(report, dict) or material_id != self._material_id:
                 return
             try:
                 self.service.save_analysis(material_id, report)
             except (ValueError, OSError, sqlite3.Error):
                 self.status_label.setText("分析完成，但报告保存失败；请重试。")
                 return
+            self._online_report = report
+            self._online_warning = ""
+            self._material_modes[material_id] = "online"
+            self.mode_combo.setCurrentIndex(self.mode_combo.findData("online"))
             self._report = report
             self._render_report(report)
             self.status_label.setText("分析完成，报告已按资料分别保存在本机。")
@@ -768,11 +1033,12 @@ class MainWindow(QMainWindow):
             return
         try:
             material = self.service.get_material(self._material_id)
-        except (ValueError, sqlite3.Error):
+        except (ValueError, OSError, sqlite3.Error):
             QMessageBox.warning(self, "导出失败", "无法读取资料信息，报告未导出。")
             return
         suffix = ".md" if extension == "md" else ".json"
-        path, _ = QFileDialog.getSaveFileName(self, "导出分析报告", f"{Path(material.filename).stem}-analysis{suffix}", "Markdown (*.md)" if extension == "md" else "JSON (*.json)")
+        report_suffix = "outline" if self.mode_combo.currentData() == "local" else "analysis"
+        path, _ = QFileDialog.getSaveFileName(self, "导出整理报告", f"{Path(material.filename).stem}-{report_suffix}{suffix}", "Markdown (*.md)" if extension == "md" else "JSON (*.json)")
         if path:
             self.export_report(path, extension)
 
@@ -781,7 +1047,7 @@ class MainWindow(QMainWindow):
         material = self.service.get_material(self._material_id)
         sources = self.service.get_sources(self._material_id)
         return {
-            "material": {"filename": material.filename, "kind": material.kind, "imported_at": material.imported_at},
+            "material": {"filename": material.filename, "kind": material.kind, "imported_at": material.imported_at, "character_count": material.character_count, "source_count": material.source_count, "warnings": list(material.warnings)},
             "report": self._report,
             "source_index": [{"id": source.id, "locator": source.locator, "page": source.page, "paragraph": source.paragraph, "text": source.text} for source in sources],
         }
@@ -795,6 +1061,11 @@ class MainWindow(QMainWindow):
         destination = Path(path)
         if destination.suffix.lower() != f".{suffix}":
             destination = destination.with_suffix(f".{suffix}") if destination.suffix else destination.with_name(destination.name + f".{suffix}")
+        if destination.exists():
+            answer = QMessageBox.question(self, "确认覆盖", f"最终目标已存在：{destination}\n是否覆盖？", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+            if answer != QMessageBox.StandardButton.Yes:
+                self.status_label.setText("已取消导出，原有文件未更改。")
+                return
         try:
             payload = self._export_payload()
             if suffix == "json":
@@ -822,19 +1093,44 @@ class MainWindow(QMainWindow):
     def _markdown_export(payload: dict[str, Any]) -> str:
         report = payload["report"]
         metadata = report.get("metadata", {})
-        lines = [f"# {report.get('title') or payload['material']['filename']}", "", f"资料文件：{payload['material']['filename']}", "", "AI 生成内容，请结合来源原文核对。", "", "## 摘要", "", str(report.get("summary", "")), "", "## 结构提纲"]
+        local = metadata.get("mode") == "local"
+        notice = "本地规则（未调用模型）；仅提供结构与来源索引，不进行内容理解。" if local else "AI 生成内容，请结合来源原文核对。"
+        lines = [f"# {report.get('title') or payload['material']['filename']}", "", f"资料文件：{payload['material']['filename']}", "", notice, "", "## 结构信息" if local else "## 摘要", "", str(report.get("summary", "")), "", "## 结构提纲"]
 
         def write_outline(nodes: list[dict[str, Any]], depth: int = 0) -> None:
             for node in nodes:
                 refs = ", ".join(node.get("source_ids", []))
-                lines.append(f"{'  ' * depth}- **{node.get('title', '')}**：{node.get('summary', '')}（来源：{refs}）")
+                origin = MainWindow._outline_origin(node, local)
+                lines.append(f"{'  ' * depth}- **{node.get('title', '')}**【{origin}】：{node.get('summary', '')}（来源：{refs}）")
                 write_outline(node.get("children", []), depth + 1)
         write_outline(report.get("outline", []))
         lines += ["", "## 知识点"]
-        lines.extend(f"- **{point.get('name', '')}**：{point.get('explanation', '')}（来源：{', '.join(point.get('source_ids', []))}）" for point in report.get("knowledge_points", []))
+        lines += ["", "知识点需要智能整理；本地规则不提供知识点。" if local else "AI 归纳，非原文。"]
+        chapters: dict[str, list[dict[str, Any]]] = {}
+        for point in report.get("knowledge_points", []):
+            chapters.setdefault(point.get("chapter") or "未标注章节", []).append(point)
+        for chapter, points in chapters.items():
+            lines += ["", f"### {chapter}"]
+            for point in points:
+                lines.append(f"- **{point.get('name', '')}**：{point.get('explanation', '')}（来源：{', '.join(point.get('source_ids', []))}）")
+                for key, label in (("definition", "定义"), ("key_points", "要点"), ("formulas", "公式"), ("conditions", "适用条件")):
+                    value = point.get(key)
+                    if value:
+                        for entry in value if isinstance(value, list) else [value]:
+                            lines.append(f"  - {label}：{entry}")
         lines += ["", "## 学习建议"]
         lines.extend(f"- {item}" for item in report.get("learning_suggestions", []))
-        lines += ["", "## 分析信息", f"- 模型：{metadata.get('model', '未知')}", f"- 生成时间：{metadata.get('generated_at', '未知')}", f"- 来源覆盖：{metadata.get('analyzed_source_count', '?')}/{metadata.get('total_source_count', '?')} 段", "", "## 分析提示"]
+        lines += ["", "## 分析信息", f"- 模型：{metadata.get('model', '未知')}", f"- 生成时间：{metadata.get('generated_at', '未知')}", f"- 已处理来源：{metadata.get('analyzed_source_count', '?')}/{metadata.get('total_source_count', '?')} 段（非语义覆盖率）"]
+        if "referenced_source_count" in metadata:
+            lines.append(f"- 已引用来源：{metadata['referenced_source_count']}")
+        if "unreferenced_source_ids" in metadata:
+            lines.append("- 未引用来源：" + ", ".join(metadata["unreferenced_source_ids"]))
+        if local:
+            start = lines.index("## 分析信息")
+            lines[start:] = ["## 本地整理信息", "- 规则：本地规则（未调用模型）", f"- 资料导入时间：{metadata.get('generated_at', '未知')}", f"- 识别标题：{metadata.get('heading_count', 0)}", f"- 原文分段：{MainWindow._local_segment_count(report)}", "", "## 规则限制", "仅识别标题和原文分段，不提炼内容含义；未识别的标题可能保留在原文分段中。"]
+        lines += ["", "## 提取限制", "扫描件需 OCR；复杂公式、表格及版式可能丢失，请对照原文件。"]
+        lines.extend(f"- {warning}" for warning in payload["material"].get("warnings", []))
+        lines += ["", "## 规则提示" if local else "## 分析提示"]
         lines.extend(f"- {warning}" for warning in report.get("warnings", []))
         lines += ["", "## 来源索引"]
         lines.extend(f"- **{source['id']}**（{source['locator']}）：{source['text']}" for source in payload["source_index"])

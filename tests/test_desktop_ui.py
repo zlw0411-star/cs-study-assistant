@@ -259,6 +259,7 @@ def test_export_appends_extension_and_preserves_existing_file_on_write_error(tmp
     assert "已导出" in window.status_label.text()
 
     target.write_text("previous export", encoding="utf-8")
+    monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
     warnings = []
     monkeypatch.setattr(QMessageBox, "warning", lambda *args: warnings.append(args))
     def fail_replace(self, destination):
